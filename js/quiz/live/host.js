@@ -8,7 +8,7 @@
 
 import { validQuestions } from '../quizModel.js';
 import { renderContent } from '../katex.js';
-import { TILE_COLORS, TILE_SHAPES } from '../tiles.js';
+import { buildTile } from '../tiles.js';
 import { genCode, questionForWire, correctSet, csvFromGame } from './protocol.js';
 import { openChannel, configured } from './net.js';
 import { MAX_PLAYERS } from './config.js';
@@ -319,16 +319,13 @@ function renderQuestionCtl() {
     <button class="lv-ghost lv-skip">end question now</button>`;
   s.append(head);
   head.querySelector('.lv-skip').addEventListener('click', endQuestion);
-  const qBox = div('lv-qbox');
+  const qBox = div('qp-question lv-qbox');
   renderContent(qBox, q.question);
   s.append(qBox);
-  const grid = div('lv-tiles-mini');
-  q.choices.forEach((c, i) => {
-    const t = div('lv-tile-mini');
-    t.style.background = TILE_COLORS[i % TILE_COLORS.length];
-    t.innerHTML = `<span class="qp-shape">${TILE_SHAPES[i % TILE_SHAPES.length]}</span><span class="lv-tile-count" data-i="${i}"></span>`;
-    grid.append(t);
-  });
+  // full choice tiles like the players see — read-only; counts stay hidden
+  // until reveal (this screen may be on a projector)
+  const grid = div('qp-choices lv-static');
+  q.choices.forEach((c, i) => grid.append(buildTile(c, i, {})));
   s.append(grid);
 }
 
@@ -349,12 +346,18 @@ function renderReveal() {
   const s = stage();
   s.innerHTML = '';
   s.append(div('lv-h1', `answers — question ${g.qIdx + 1}`));
-  const grid = div('lv-tiles-mini');
+  if (g.wireQ) {
+    const qBox = div('qp-question lv-qbox');
+    renderContent(qBox, g.wireQ.question);
+    s.append(qBox);
+  }
   const counts = g.lastReveal?.counts || [];
+  const grid = div('qp-choices lv-static');
   (g.wireQ?.choices || []).forEach((c, i) => {
-    const t = div('lv-tile-mini' + (g.lastReveal?.correct.includes(i) ? ' ok' : ' dim'));
-    t.style.background = TILE_COLORS[i % TILE_COLORS.length];
-    t.innerHTML = `<span class="qp-shape">${TILE_SHAPES[i % TILE_SHAPES.length]}</span><span class="lv-tile-count">${counts[i] || 0}</span>`;
+    const t = buildTile(c, i, {});
+    t.classList.add(g.lastReveal?.correct.includes(i) ? 'qp-correct' : 'qp-dim');
+    const badge = div('lv-count-badge', String(counts[i] || 0));
+    t.append(badge);
     grid.append(t);
   });
   s.append(grid);
