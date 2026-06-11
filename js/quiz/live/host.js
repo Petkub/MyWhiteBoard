@@ -79,8 +79,12 @@ async function startGame(state) {
       meta: { role: 'host' },
       onMessage,
       onPresence: syncRoster,
+      // fires before `ch` is assigned on the FIRST subscribe (broadcastSync
+      // no-ops then); real purpose is resync after auto-RE-subscribes.
       onStatus: (s) => { if (s === 'SUBSCRIBED') { setStatus(''); broadcastSync(); } },
     });
+    setStatus('');
+    broadcastSync(); // initial state announcement — ch is assigned now
   } catch (e) {
     modalAlert({ title: 'Connection failed', message: String(e.message || e) });
     closeHost();

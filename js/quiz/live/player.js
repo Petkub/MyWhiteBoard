@@ -76,8 +76,12 @@ async function joinGame(code, nick, saved) {
     meta: { role: 'player', nick },
     onMessage,
     onPresence: watchHost,
+    // NOTE: this fires before `ch` is assigned on the FIRST subscribe (the
+    // await hasn't resolved yet) — that's fine, the explicit hello() below
+    // covers it; this path matters for auto-RE-subscribes after a drop.
     onStatus: (s) => { if (s === 'SUBSCRIBED') hello(); },
   });
+  hello(); // initial join announcement — ch is assigned now
   renderShell();
   renderWait('joined — waiting for the host…');
   startHostWatch();
