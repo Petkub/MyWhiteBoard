@@ -1,0 +1,14 @@
+{
+  "name": "MyWhiteBoard",
+  "short_name": "Whiteboard",
+  "description": "Goodnotes-style handwriting whiteboard",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#efe9dc",
+  "theme_color": "#fde9a3",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

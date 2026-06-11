@@ -1,0 +1,68 @@
+/* MyWhiteBoard theme — Inter UI font, warm cream palette, ink #111. */
+
+/* Excalifont — hand-drawn font for text boxes / labels (OFL, vendored). */
+@font-face {
+  font-family: 'Excalifont';
+  src: url('../assets/fonts/Excalifont-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+
+/* Itim — handwriting Thai (+Latin) for text-box glyphs Excalifont lacks (OFL, vendored). */
+@font-face {
+  font-family: 'Itim';
+  src: url('../assets/fonts/Itim-thai.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: 'Itim';
+  src: url('../assets/fonts/Itim-latin.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light;    /* UA form controls / scrollbars match theme */
+  --bg: #efe9dc;          /* desk behind the page */
+  --ink: #111111;
+  --ink-strong: #000000;  /* hover-darken for ink-filled buttons */
+  --ink-soft: #444;
+  --ink-mute: #999;
+  --cream: #fde9a3;
+  --cream-soft: #fff3c2;
+  --paper: #ffffff;
+  --accent-red: #d62828;
+  --accent-blue: #1d3fb6;
+  --accent-green: #2f9e44;
+  --accent-purple: #7048e8;
+  --accent-pink: #e64980;
+  --line: #d9cfb8;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-ui); /* legacy alias — UI is now Inter */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 160ms;
+}
+
+/* Dark theme — app shell + desk only; the page paper stays white (canvas-drawn)
+   so ink stays visible and exports are unchanged. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #15171a;          /* desk behind the page */
+  --ink: #e9eaec;         /* primary text + borders */
+  --ink-strong: #ffffff;  /* hover-brighten in dark */
+  --ink-soft: #b4b8be;
+  --ink-mute: #7c828b;
+  --cream: #23272e;       /* toolbar / active-button text surface */
+  --cream-soft: #2e333b;  /* hover */
+  --paper: #20242a;       /* button + card surfaces (NOT the page) */
+  --line: #363b43;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  font-family: var(--font-mono);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
