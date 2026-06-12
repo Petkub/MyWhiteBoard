@@ -41,9 +41,11 @@ export function drawLive(stroke) {
 }
 
 // ---- laser pointer trails (ephemeral, never committed) ----
-// trails: [{ color, size, points: [{x, y, t}] }] — alpha/width taper with
-// point age so the trail melts away comet-style.
+// trails: [{ color, size, mode, live, released?, points: [{x, y, t}] }]
+//   mode 'trail': comet — each point fades LASER_LIFE_MS after it was drawn
+//   mode 'hold' : whole stroke stays while live, fades as one piece on release
 export const LASER_LIFE_MS = 700;
+export const LASER_HOLD_FADE_MS = 450;
 
 export function drawLaserTrails(trails) {
   clearOverlay();
@@ -56,17 +58,29 @@ export function drawLaserTrails(trails) {
   for (const tr of trails) {
     ctx.shadowColor = tr.color;
     ctx.strokeStyle = tr.color;
-    for (let i = 1; i < tr.points.length; i++) {
-      const p0 = tr.points[i - 1], p1 = tr.points[i];
-      const a = Math.max(0, 1 - (now - p1.t) / LASER_LIFE_MS);
-      if (a <= 0) continue;
+    if (tr.mode === 'hold') {
+      const a = tr.live ? 1 : Math.max(0, 1 - (now - tr.released) / LASER_HOLD_FADE_MS);
+      if (a <= 0 || tr.points.length < 2) continue;
       ctx.globalAlpha = a;
       ctx.shadowBlur = 14 * a;
-      ctx.lineWidth = Math.max(0.5, tr.size * (0.35 + 0.65 * a));
+      ctx.lineWidth = tr.size;
       ctx.beginPath();
-      ctx.moveTo(p0.x, p0.y);
-      ctx.lineTo(p1.x, p1.y);
+      ctx.moveTo(tr.points[0].x, tr.points[0].y);
+      for (let i = 1; i < tr.points.length; i++) ctx.lineTo(tr.points[i].x, tr.points[i].y);
       ctx.stroke();
+    } else {
+      for (let i = 1; i < tr.points.length; i++) {
+        const p0 = tr.points[i - 1], p1 = tr.points[i];
+        const a = Math.max(0, 1 - (now - p1.t) / LASER_LIFE_MS);
+        if (a <= 0) continue;
+        ctx.globalAlpha = a;
+        ctx.shadowBlur = 14 * a;
+        ctx.lineWidth = Math.max(0.5, tr.size * (0.35 + 0.65 * a));
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+      }
     }
     // hot white core at the newest point while the stroke is live
     const last = tr.points[tr.points.length - 1];

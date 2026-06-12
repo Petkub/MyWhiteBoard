@@ -29,6 +29,7 @@ export const TOOL_DEFAULTS = {
   },
   laser: {
     color: '#d62828', size: 5, min: 2, max: 14, step: 1, // ephemeral — never committed
+    style: 'hold', // 'hold' = stroke persists while drawing, fades on release; 'trail' = comet
   },
   shape: {
     color: '#111111', size: 2.5, min: 1, max: 10, step: 0.5,

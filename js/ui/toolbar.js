@@ -344,6 +344,10 @@ export function buildToolbar(mount) {
         <button data-style="fountain" class="tb-chip">fountain</button>
         <button data-style="ballpoint" class="tb-chip">ballpoint</button>
       </div>
+      <div class="tb-group tb-laseropts">
+        <button data-lstyle="hold" class="tb-chip" title="Stroke stays while drawing, fades on release">hold</button>
+        <button data-lstyle="trail" class="tb-chip" title="Comet trail that fades behind the tip">trail</button>
+      </div>
       <div class="tb-group tb-shapes"></div>
       <div class="tb-group tb-shapeopts">
         <button class="tb-chip tb-fill" title="Fill shape">fill</button>
@@ -452,6 +456,7 @@ export function buildToolbar(mount) {
     sizeR: root.querySelector('.tb-size-r'),
     sizeVal: root.querySelector('.tb-size-val'),
     penstyle: root.querySelector('.tb-penstyle'),
+    laseropts: root.querySelector('.tb-laseropts'),
     shapes: root.querySelector('.tb-shapes'),
     selectopts: root.querySelector('.tb-selectopts'),
     emojiopts: root.querySelector('.tb-emojiopts'),
@@ -537,6 +542,8 @@ export function buildToolbar(mount) {
   });
   refs.penstyle.querySelectorAll('[data-style]').forEach((b) =>
     b.addEventListener('click', () => { curTool().style = b.dataset.style; saveToolPrefs(); syncPenStyle(); }));
+  refs.laseropts.querySelectorAll('[data-lstyle]').forEach((b) =>
+    b.addEventListener('click', () => { state.tools.laser.style = b.dataset.lstyle; saveToolPrefs(); syncLaserOpts(); }));
 
   refs.fill.addEventListener('click', () => { const t = curTool(); t.filled = !t.filled; saveToolPrefs(); syncShapeOpts(); });
   refs.shapeopts.querySelectorAll('.tb-step-b[data-dim]').forEach((b) =>
@@ -671,14 +678,21 @@ function syncTool() {
     refs.sizeVal.textContent = t.size;
   }
   refs.penstyle.style.display = state.tool === 'pen' ? '' : 'none';
+  refs.laseropts.style.display = state.tool === 'laser' ? '' : 'none';
   refs.shapes.style.display = state.tool === 'shape' ? '' : 'none';
   refs.emojiopts.style.display = state.tool === 'emoji' ? '' : 'none';
   refs.selectopts.style.display = (state.tool === 'select' || state.tool === 'lasso') ? '' : 'none';
   // Contextual sub-bar only exists for tools that have extra options.
-  refs.sub.hidden = !['pen', 'shape', 'select', 'lasso', 'emoji'].includes(state.tool);
+  refs.sub.hidden = !['pen', 'laser', 'shape', 'select', 'lasso', 'emoji'].includes(state.tool);
   refs.subLabel.textContent = state.tool;
-  syncPenStyle(); syncShapes(); syncShapeOpts(); syncEmoji(); syncColors();
+  syncPenStyle(); syncLaserOpts(); syncShapes(); syncShapeOpts(); syncEmoji(); syncColors();
   refreshCursor();
+}
+
+function syncLaserOpts() {
+  const st = state.tools.laser.style || 'hold';
+  refs.laseropts.querySelectorAll('[data-lstyle]').forEach((b) =>
+    b.classList.toggle('active', b.dataset.lstyle === st));
 }
 
 function syncEmoji() {

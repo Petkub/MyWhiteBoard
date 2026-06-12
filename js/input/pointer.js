@@ -16,7 +16,7 @@ import { eraseAt, strokeIndexAt } from '../engine/eraser.js';
 import { render } from '../render/renderer.js';
 import {
   drawLive, clearOverlay, drawSelection, drawRubber, drawLassoPath,
-  drawLaserTrails, LASER_LIFE_MS, HANDLES, handlePoint, isResizable,
+  drawLaserTrails, LASER_LIFE_MS, LASER_HOLD_FADE_MS, HANDLES, handlePoint, isResizable,
 } from '../render/overlay.js';
 
 let el = null;
@@ -51,9 +51,10 @@ const laser = { trails: [], cur: null, raf: 0 };
 function laserFrame() {
   const now = performance.now();
   for (const tr of laser.trails) {
-    if (!tr.live) tr.points = tr.points.filter((p) => now - p.t < LASER_LIFE_MS);
+    if (!tr.live && tr.mode !== 'hold') tr.points = tr.points.filter((p) => now - p.t < LASER_LIFE_MS);
   }
-  laser.trails = laser.trails.filter((tr) => tr.live || tr.points.length > 1);
+  laser.trails = laser.trails.filter((tr) => tr.live ||
+    (tr.mode === 'hold' ? now - tr.released < LASER_HOLD_FADE_MS : tr.points.length > 1));
   if (!laser.trails.length) {
     laser.raf = 0;
     clearOverlay();
@@ -187,7 +188,7 @@ function startInk(e, s) {
   const t = curTool();
 
   if (state.tool === 'laser') {
-    laser.cur = { color: t.color, size: t.size, live: true, points: [{ x: w.x, y: w.y, t: performance.now() }] };
+    laser.cur = { color: t.color, size: t.size, mode: t.style === 'hold' ? 'hold' : 'trail', live: true, points: [{ x: w.x, y: w.y, t: performance.now() }] };
     laser.trails.push(laser.cur);
     ink.active = true;
     if (!laser.raf) laser.raf = requestAnimationFrame(laserFrame);
@@ -395,7 +396,7 @@ function releaseInk(e) {
   const w = clampToPage(toWorld(s));
 
   if (state.tool === 'laser') {
-    if (laser.cur) laser.cur.live = false; // trail keeps fading on its own
+    if (laser.cur) { laser.cur.live = false; laser.cur.released = performance.now(); }
     laser.cur = null;
     ink.active = false;
     return;
@@ -461,7 +462,7 @@ function releaseInk(e) {
 }
 
 function cancelInk() {
-  if (laser.cur) { laser.cur.live = false; laser.cur = null; }
+  if (laser.cur) { laser.cur.live = false; laser.cur.released = performance.now(); laser.cur = null; }
   ink.active = false; ink.stroke = null; ink.filtered = null; ink.pull = null; ink.straight = false;
   sel.mode = null; sel.undoSnap = null;
   resize.active = false; resize.handle = null; resize.stroke = null;
