@@ -210,6 +210,74 @@ export function toggleLockSelection() {
   mutate(() => { for (const i of state.selected) if (ss[i]) ss[i].locked = lock; });
 }
 
+// ---------------------------------------------------------------- clipboard
+// Internal stroke clipboard (session-only). Coords are page-local, so copies
+// paste onto any page. Node ids are regenerated on paste and edges remapped
+// within the pasted set; edges whose endpoints weren't both copied are dropped.
+let clipboard = [];
+
+const genStrokeId = () => 'n' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+
+function offsetStroke(s, dx, dy) {
+  if (s.tool === 'shape' && s.kind === 'edge') return; // follows its nodes
+  if (s.tool === 'shape') { s.a.x += dx; s.a.y += dy; s.b.x += dx; s.b.y += dy; }
+  else if (s.tool === 'image' || s.tool === 'text' || s.tool === 'emoji' || s.tool === 'math') { s.x += dx; s.y += dy; }
+  else for (const p of s.points) { p.x += dx; p.y += dy; }
+}
+
+export const hasClipboard = () => clipboard.length > 0;
+
+export function copySelection() {
+  if (!state.selected.size) return 0;
+  const ss = curStrokes();
+  clipboard = [...state.selected].map((i) => ss[i]).filter(Boolean).map(clone);
+  return clipboard.length;
+}
+
+export function cutSelection() {
+  const n = copySelection();
+  if (n) deleteSelected();
+  return n;
+}
+
+export function pasteClipboard() {
+  if (!clipboard.length) return 0;
+  const pasted = clipboard.map(clone);
+  const idMap = new Map();
+  for (const s of pasted) {
+    if (s.tool === 'shape' && s.kind === 'node' && s.id) {
+      const nid = genStrokeId();
+      idMap.set(s.id, nid);
+      s.id = nid;
+    }
+  }
+  const kept = pasted.filter((s) =>
+    !(s.tool === 'shape' && s.kind === 'edge') || (idMap.has(s.from) && idMap.has(s.to)));
+  for (const s of kept) {
+    if (s.tool === 'shape' && s.kind === 'edge') { s.from = idMap.get(s.from); s.to = idMap.get(s.to); }
+    delete s.locked;            // a pasted copy starts unlocked
+    offsetStroke(s, 16, 16);    // don't land exactly on the source
+  }
+  if (!kept.length) return 0;
+  mutate(() => {
+    const ss = curStrokes();
+    const base = ss.length;
+    ss.push(...kept);
+    state.selected.clear();
+    for (let k = 0; k < kept.length; k++) state.selected.add(base + k);
+  });
+  return kept.length;
+}
+
+// Copy + paste in one step (Ctrl+D) without touching the clipboard.
+export function duplicateSelection() {
+  const save = clipboard;
+  if (!copySelection()) return 0;
+  const n = pasteClipboard();
+  clipboard = save;
+  return n;
+}
+
 export function setTool(t) {
   if (t === state.tool) return;
   state.tool = t;

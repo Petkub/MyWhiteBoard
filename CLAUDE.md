@@ -182,6 +182,7 @@ Hybrid, by `pointerType`:
 - Tools: pen, highlighter, eraser (geometric stroke hit-test), shape (picker kinds: line/arrow/rect/circle/grid/node — triangle/diamond exist in code but are dropped from the picker), text (taps open `ui/textEditor.js`), math (taps open `ui/mathEditor.js`), select (tap/rubber-band move + lock), lasso (point-in-polygon select + lock), hand. (The emoji tool was removed; `emoji` rendering is kept so old objects survive.)
 - Node **tree-pull**: with shape=node, dragging from an existing node's rim spawns a child node + connecting edge.
 - A DOM brush-ring cursor shows eraser/highlighter/pen size on the page.
+- **Clipboard** (`state.js`): Ctrl+C/X/V/D on the selection — internal, session-only, page-local coords (paste works cross-page, +16px offset, pasted copies unlocked + selected, node ids regenerated with edges remapped/dropped). Ctrl+V with an EMPTY stroke clipboard falls through to the window `paste` event, which inserts an OS-clipboard image (screenshot paste) via `insertImageFile`.
 - `text`/`math` are single-tap placements (no drag; re-tap to edit). `lock` is tool-agnostic — toggles `locked` on `state.selected` (red ring); shown for select **and** lasso. After a mutation, `main.js#reflectSelection` redraws rings for select+lasso.
 - **Resize handles**: selecting a single `text`/`image`/`math`/`emoji` draws 8 handles (`overlay.js#isResizable`/`handlePoint`, `pointer.js#applyResize`). Text side-edges = width, corners/vertical = font scale; image/math corners keep aspect.
 

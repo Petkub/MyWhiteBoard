@@ -1,6 +1,10 @@
 // Entry point — boots editor + library, routes between them via hash.
 
-import { state, setTool, undoAction, redoAction, flipPage, loadInto, deleteSelected } from './state.js';
+import {
+  state, setTool, undoAction, redoAction, flipPage, loadInto, deleteSelected,
+  copySelection, cutSelection, pasteClipboard, duplicateSelection, hasClipboard,
+} from './state.js';
+import { insertImageFile } from './ui/insert.js';
 import { initQuizPlay, playQuiz } from './quiz/quizPlay.js';
 import { openJoin, closePlayer } from './quiz/live/player.js';
 import { hostQuiz, resumeHostIfAny } from './quiz/live/host.js';
@@ -144,12 +148,30 @@ function bindKeys() {
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.code === 'KeyZ') { e.preventDefault(); e.shiftKey ? redoAction() : undoAction(); return; }
     if (mod && e.code === 'KeyY') { e.preventDefault(); redoAction(); return; }
+    if (mod && e.code === 'KeyC') { if (copySelection()) e.preventDefault(); return; }
+    if (mod && e.code === 'KeyX') { if (cutSelection()) e.preventDefault(); return; }
+    if (mod && e.code === 'KeyD') { e.preventDefault(); duplicateSelection(); return; }
+    if (mod && e.code === 'KeyV') {
+      // internal strokes win; with an empty stroke clipboard we let the
+      // browser fire the 'paste' event so OS-clipboard images insert below
+      if (hasClipboard()) { e.preventDefault(); setTool('select'); syncAll(); pasteClipboard(); }
+      return;
+    }
     if (mod) return;
     if ((e.code === 'Delete' || e.code === 'Backspace') && state.selected.size) { e.preventDefault(); deleteSelected(); return; }
     if (e.code === 'ArrowLeft') { flipPage(-1); return; }
     if (e.code === 'ArrowRight') { flipPage(1); return; }
     const tool = SHORTCUTS[e.code];
     if (tool) { setTool(tool); syncAll(); }
+  });
+
+  // OS-clipboard image -> insert as an image object (screenshots, copied pics)
+  window.addEventListener('paste', (e) => {
+    if (editorEl.style.display === 'none') return;
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || isEditing() || isMathEditing()) return;
+    const f = [...(e.clipboardData?.files || [])].find((x) => x.type.startsWith('image/'));
+    if (f) { e.preventDefault(); insertImageFile(f); }
   });
 
   window.addEventListener('resize', () => {
