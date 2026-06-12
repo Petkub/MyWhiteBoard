@@ -43,6 +43,7 @@ const ICONS = {
   hand: svg('<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/>'),
   emoji: svg('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'),
   math: svg('<path d="M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6.2a1 1 0 0 1 0 1.2l-4.5 6.2a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2"/>'),
+  laser: svg('<circle cx="12" cy="14" r="2"/><path d="M12 4v4"/><path d="m5.3 7.3 2.8 2.8"/><path d="m18.7 7.3-2.8 2.8"/><path d="M3 14h3"/><path d="M18 14h3"/>'),
 };
 
 const LOCK_ICON = svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>');
@@ -56,6 +57,7 @@ const IMGLIB_ICON = svg('<rect x="3" y="3" width="18" height="18" rx="2"/><circl
 const TOOLS = [
   ['pen', 'Pen (P)'],
   ['highlighter', 'Highlighter (M)'],
+  ['laser', 'Laser pointer (K)'],
   ['eraser', 'Eraser (E)'],
   ['shape', 'Shape (S)'],
   ['text', 'Text (T)'],
@@ -659,7 +661,7 @@ function syncTool() {
     b.classList.toggle('active', b.dataset.tool === state.tool));
   const t = curTool();
   // Size stays in place but dims when the tool has no size — the main bar never reflows.
-  const showSize = ['pen', 'highlighter', 'eraser', 'shape', 'text', 'math'].includes(state.tool);
+  const showSize = ['pen', 'highlighter', 'laser', 'eraser', 'shape', 'text', 'math'].includes(state.tool);
   refs.sizeBox.classList.toggle('disabled', !showSize);
   if (showSize) {
     refs.sizeR.min = t.min ?? 1;

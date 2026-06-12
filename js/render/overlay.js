@@ -40,6 +40,49 @@ export function drawLive(stroke) {
   drawStroke(ctx, stroke);
 }
 
+// ---- laser pointer trails (ephemeral, never committed) ----
+// trails: [{ color, size, points: [{x, y, t}] }] — alpha/width taper with
+// point age so the trail melts away comet-style.
+export const LASER_LIFE_MS = 700;
+
+export function drawLaserTrails(trails) {
+  clearOverlay();
+  if (!trails.length) return;
+  world();
+  const now = performance.now();
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const tr of trails) {
+    ctx.shadowColor = tr.color;
+    ctx.strokeStyle = tr.color;
+    for (let i = 1; i < tr.points.length; i++) {
+      const p0 = tr.points[i - 1], p1 = tr.points[i];
+      const a = Math.max(0, 1 - (now - p1.t) / LASER_LIFE_MS);
+      if (a <= 0) continue;
+      ctx.globalAlpha = a;
+      ctx.shadowBlur = 14 * a;
+      ctx.lineWidth = Math.max(0.5, tr.size * (0.35 + 0.65 * a));
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+    }
+    // hot white core at the newest point while the stroke is live
+    const last = tr.points[tr.points.length - 1];
+    if (tr.live && last) {
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, Math.max(1.2, tr.size * 0.35), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
 export const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 export const isResizable = (s) => s && (s.tool === 'text' || s.tool === 'image' || s.tool === 'emoji' || s.tool === 'math');
 

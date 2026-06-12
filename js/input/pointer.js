@@ -14,7 +14,10 @@ import { nodeAtRim, nodeCenter, nodeRadius } from '../engine/shapes.js';
 import { strokeBBox } from '../engine/strokes.js';
 import { eraseAt, strokeIndexAt } from '../engine/eraser.js';
 import { render } from '../render/renderer.js';
-import { drawLive, clearOverlay, drawSelection, drawRubber, drawLassoPath, HANDLES, handlePoint, isResizable } from '../render/overlay.js';
+import {
+  drawLive, clearOverlay, drawSelection, drawRubber, drawLassoPath,
+  drawLaserTrails, LASER_LIFE_MS, HANDLES, handlePoint, isResizable,
+} from '../render/overlay.js';
 
 let el = null;
 let spaceDown = false;
@@ -42,8 +45,26 @@ const lasso = { pts: null };
 const erase = { active: false, undoSnap: null, changed: false };
 const gesture = { pointers: new Map(), mode: null, lastMid: null, lastDist: 0, startX: 0, startY: 0 };
 
+// Laser pointer — ephemeral trails animated by a rAF loop until they fade.
+const laser = { trails: [], cur: null, raf: 0 };
+
+function laserFrame() {
+  const now = performance.now();
+  for (const tr of laser.trails) {
+    if (!tr.live) tr.points = tr.points.filter((p) => now - p.t < LASER_LIFE_MS);
+  }
+  laser.trails = laser.trails.filter((tr) => tr.live || tr.points.length > 1);
+  if (!laser.trails.length) {
+    laser.raf = 0;
+    clearOverlay();
+    return;
+  }
+  drawLaserTrails(laser.trails);
+  laser.raf = requestAnimationFrame(laserFrame);
+}
+
 let cursorEl = null;
-const RING_TOOLS = new Set(['eraser', 'highlighter', 'pen']);
+const RING_TOOLS = new Set(['eraser', 'highlighter', 'pen', 'laser']);
 
 export function initInput(overlayCanvas) {
   el = overlayCanvas;
@@ -165,6 +186,14 @@ function startInk(e, s) {
   w.t = e.timeStamp; w.p = e.pressure || 0;
   const t = curTool();
 
+  if (state.tool === 'laser') {
+    laser.cur = { color: t.color, size: t.size, live: true, points: [{ x: w.x, y: w.y, t: performance.now() }] };
+    laser.trails.push(laser.cur);
+    ink.active = true;
+    if (!laser.raf) laser.raf = requestAnimationFrame(laserFrame);
+    return; // ephemeral — never committed, no undo, no autosave
+  }
+
   if (state.tool === 'text') {
     textHandler({ x: w.x, y: w.y });
     return; // single tap; no drag
@@ -274,6 +303,11 @@ function onMove(e) {
   if (!ink.active) return;
   const w = clampToPage(toWorld(s));
 
+  if (state.tool === 'laser') {
+    laser.cur?.points.push({ x: w.x, y: w.y, t: performance.now() });
+    return; // rAF loop paints
+  }
+
   if (state.tool === 'lasso') {
     lasso.pts.push({ x: w.x, y: w.y });
     drawLassoPath(lasso.pts);
@@ -360,6 +394,13 @@ function releaseInk(e) {
   const s = localXY(e);
   const w = clampToPage(toWorld(s));
 
+  if (state.tool === 'laser') {
+    if (laser.cur) laser.cur.live = false; // trail keeps fading on its own
+    laser.cur = null;
+    ink.active = false;
+    return;
+  }
+
   if (state.tool === 'lasso') {
     finalizeLasso(lasso.pts);
     lasso.pts = null;
@@ -420,6 +461,7 @@ function releaseInk(e) {
 }
 
 function cancelInk() {
+  if (laser.cur) { laser.cur.live = false; laser.cur = null; }
   ink.active = false; ink.stroke = null; ink.filtered = null; ink.pull = null; ink.straight = false;
   sel.mode = null; sel.undoSnap = null;
   resize.active = false; resize.handle = null; resize.stroke = null;

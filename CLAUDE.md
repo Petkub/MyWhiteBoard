@@ -179,6 +179,7 @@ Internet play over **Supabase Realtime** (broadcast + presence; SDK CDN-lazy fro
 
 Hybrid, by `pointerType`:
 - **pen** → inks (pressure→width). **mouse** → inks (unless `hand` tool, Space held, or middle button → pan). **touch** → gestures only (1-finger pan + horizontal-flick page-flip when zoomed out; 2-finger pinch-zoom), never inks. An incoming touch cancels an in-progress stroke (palm rejection).
+- **Laser pointer** (`laser` tool, K): ephemeral glowing trail on the overlay — points expire after `LASER_LIFE_MS=700` via a rAF loop (`pointer.js#laserFrame` + `overlay.js#drawLaserTrails`). Never committed: no stroke record, no undo, no autosave, nothing in paint.js/bbox/eraser.
 - Tools: pen, highlighter, eraser (geometric stroke hit-test), shape (picker kinds: line/arrow/rect/circle/grid/node — triangle/diamond exist in code but are dropped from the picker), text (taps open `ui/textEditor.js`), math (taps open `ui/mathEditor.js`), select (tap/rubber-band move + lock), lasso (point-in-polygon select + lock), hand. (The emoji tool was removed; `emoji` rendering is kept so old objects survive.)
 - Node **tree-pull**: with shape=node, dragging from an existing node's rim spawns a child node + connecting edge.
 - A DOM brush-ring cursor shows eraser/highlighter/pen size on the page.

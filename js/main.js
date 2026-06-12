@@ -28,7 +28,7 @@ import { initTabs, openTab, removeTab, getTabs } from './ui/tabs.js';
 
 const SHORTCUTS = {
   KeyP: 'pen', KeyM: 'highlighter', KeyE: 'eraser', KeyS: 'shape',
-  KeyT: 'text', KeyV: 'select', KeyL: 'lasso', KeyH: 'hand',
+  KeyT: 'text', KeyV: 'select', KeyL: 'lasso', KeyH: 'hand', KeyK: 'laser',
 };
 
 let editorEl, libraryEl, quizHomeEl, quizEditEl;

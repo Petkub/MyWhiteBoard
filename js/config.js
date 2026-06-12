@@ -27,6 +27,9 @@ export const TOOL_DEFAULTS = {
   eraser: {
     color: null, size: 16, min: 6, max: 60, step: 1, mode: 'stroke',
   },
+  laser: {
+    color: '#d62828', size: 5, min: 2, max: 14, step: 1, // ephemeral — never committed
+  },
   shape: {
     color: '#111111', size: 2.5, min: 1, max: 10, step: 0.5,
     kind: 'rect', filled: false,
