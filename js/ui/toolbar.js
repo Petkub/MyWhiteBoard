@@ -6,7 +6,7 @@ import { COLORS, SHAPES, BACKGROUNDS, EMOJIS } from '../config.js';
 import {
   state, curTool, setTool, setColor, setSize, setBackground, setPageHeight,
   undoAction, redoAction, flipPage, addPage, removePage, clearPage, curPage, toRecord,
-  toggleLockSelection, saveToolPrefs, toggleSpread, toggleBookmark,
+  toggleLockSelection, saveToolPrefs, toggleSpread, toggleBookmark, toggleSnap,
 } from '../state.js';
 import { togglePagesPanel, refreshPagesPanel } from './pagesPanel.js';
 import { goLibrary } from '../router.js';
@@ -359,9 +359,11 @@ export function buildToolbar(mount) {
           <button class="tb-step-b" data-arrow="-2" data-d="-1">−</button>
           <span class="tb-arrowsize-v">14</span>
           <button class="tb-step-b" data-arrow="2" data-d="1">+</button></span>
+        <button class="tb-chip tb-snap" title="Snap to grid">⌗ snap</button>
       </div>
       <div class="tb-group tb-selectopts">
         <button class="tb-chip tb-lock" title="Lock / unlock selection">🔒 lock</button>
+        <button class="tb-chip tb-snap" title="Snap moves to grid">⌗ snap</button>
       </div>
       <div class="tb-group tb-emojiopts"></div>
     </div>
@@ -564,6 +566,9 @@ export function buildToolbar(mount) {
       syncPages();
     }));
   root.querySelector('.tb-lock').addEventListener('click', toggleLockSelection);
+  const syncSnap = () => root.querySelectorAll('.tb-snap').forEach((b) => b.classList.toggle('active', state.snap));
+  root.querySelectorAll('.tb-snap').forEach((b) => b.addEventListener('click', () => { toggleSnap(); syncSnap(); }));
+  syncSnap();
   root.querySelector('.tb-undo').addEventListener('click', undoAction);
   root.querySelector('.tb-redo').addEventListener('click', redoAction);
   root.querySelector('.tb-prev').addEventListener('click', () => flipPage(-1));

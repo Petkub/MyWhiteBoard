@@ -4,7 +4,7 @@
 //   touch-> gestures   (1 finger pan + flip, 2 finger pinch-zoom); never inks.
 // Palm rejection: an incoming touch cancels any in-progress ink stroke.
 
-import { FLICK_FLIP_PX, PAGE_W, clamp } from '../config.js';
+import { FLICK_FLIP_PX, PAGE_W, SNAP_STEP, clamp } from '../config.js';
 import { camera, screenToWorld, worldToScreen, panBy, zoomAt } from '../viewport/camera.js';
 import {
   state, curTool, curStrokes, curPage, clone, addStroke, recordUndo, mutate,
@@ -36,7 +36,7 @@ function afterCameraChange() {
 }
 
 const ink = { active: false, stroke: null, filtered: null, pull: null, straight: false };
-const sel = { mode: null, start: null, undoSnap: null };
+const sel = { mode: null, start: null, acc: { x: 0, y: 0 }, undoSnap: null };
 const resize = { active: false, handle: null, stroke: null, startStroke: null, startBBox: null, undoSnap: null };
 const lasso = { pts: null };
 const erase = { active: false, undoSnap: null, changed: false };
@@ -203,6 +203,7 @@ function startInk(e, s) {
     }
     const idx = strokeIndexAt(curStrokes(), w, 8 / camera.scale);
     sel.start = w;
+    sel.acc = { x: 0, y: 0 }; // translation applied so far (snap quantizes it)
     sel.undoSnap = null;
     if (idx >= 0) {
       if (!e.shiftKey && !state.selected.has(idx)) state.selected.clear();
@@ -239,12 +240,13 @@ function startInk(e, s) {
         return;
       }
     }
+    const sa = snapPoint({ ...w });
     ink.stroke = {
       tool: 'shape', kind: t.kind, color: t.color, size: t.size, filled: t.filled,
       cols: t.cols, rows: t.rows,
       arrowStart: t.arrowStart, arrowEnd: t.arrowEnd, arrowSize: t.arrowSize,
       seed: 1 + Math.floor(Math.random() * 1e6),
-      a: w, b: w,
+      a: sa, b: { ...sa },
     };
     if (t.kind === 'node') ink.stroke.id = genId();
     ink.active = true;
@@ -286,11 +288,16 @@ function onMove(e) {
       render();
       drawSelection(curStrokes(), state.selected);
     } else if (sel.mode === 'move') {
-      const dx = w.x - sel.start.x, dy = w.y - sel.start.y;
-      if (!sel.undoSnap) sel.undoSnap = clone(curStrokes());
-      translateSelected(dx, dy);
-      sel.start = w;
-      render();
+      // translate by (quantized) total drag minus what's already applied —
+      // with snap on, objects step in SNAP_STEP increments
+      let totX = w.x - sel.start.x, totY = w.y - sel.start.y;
+      if (state.snap) { totX = snapV(totX); totY = snapV(totY); }
+      if (totX !== sel.acc.x || totY !== sel.acc.y) {
+        if (!sel.undoSnap) sel.undoSnap = clone(curStrokes());
+        translateSelected(totX - sel.acc.x, totY - sel.acc.y);
+        sel.acc = { x: totX, y: totY };
+        render();
+      }
       drawSelection(curStrokes(), state.selected);
     } else {
       drawRubber(sel.start, w);
@@ -311,7 +318,8 @@ function onMove(e) {
   }
 
   if (state.tool === 'shape') {
-    ink.stroke.b = e.shiftKey ? squareLock(ink.stroke.a, w) : w;
+    const sw = snapPoint({ ...w });
+    ink.stroke.b = e.shiftKey ? squareLock(ink.stroke.a, sw) : sw;
     drawLive(ink.stroke);
     return;
   }
@@ -398,7 +406,7 @@ function releaseInk(e) {
       clearOverlay(); render();
       return;
     }
-    const a = ink.stroke.a, b = e.shiftKey ? squareLock(a, w) : w;
+    const a = ink.stroke.a, b = e.shiftKey ? squareLock(a, snapPoint({ ...w })) : snapPoint({ ...w });
     if (Math.hypot(b.x - a.x, b.y - a.y) >= 4 / camera.scale) {
       ink.stroke.b = b;
       addStroke(ink.stroke);
@@ -425,6 +433,14 @@ function cancelInk() {
   resize.active = false; resize.handle = null; resize.stroke = null;
   erase.active = false; erase.changed = false;
   clearOverlay();
+}
+
+// Snap-to-grid: shape endpoints land on the page-grid lattice. Snap BEFORE
+// squareLock — both axes on-grid keeps the locked square on-grid too.
+const snapV = (v) => Math.round(v / SNAP_STEP) * SNAP_STEP;
+function snapPoint(w) {
+  if (state.snap) { w.x = snapV(w.x); w.y = snapV(w.y); }
+  return w;
 }
 
 // Equal-aspect lock (shift): snap drag point so |dx| == |dy| (square/circle).

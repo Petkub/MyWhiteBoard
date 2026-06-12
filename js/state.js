@@ -41,6 +41,7 @@ export const state = {
   tool: 'pen',
   tools: loadToolPrefs(clone(TOOL_DEFAULTS)),
   spread: localStorage.getItem(SPREAD_KEY) === '1', // two-page book view
+  snap: localStorage.getItem('wb-snap') === '1',    // snap-to-grid (shapes + move)
   // open notebook metadata
   notebookId: null,
   title: 'Untitled',
@@ -64,6 +65,11 @@ export const state = {
 // left, odd on the right). The active page keeps page-local coordinates;
 // the right page is rendered translated by PAGE_W + SPREAD_GAP.
 export const SPREAD_GAP = 24;
+
+export function toggleSnap() {
+  state.snap = !state.snap;
+  try { localStorage.setItem('wb-snap', state.snap ? '1' : '0'); } catch { /* quota */ }
+}
 
 export function toggleSpread() {
   state.spread = !state.spread;

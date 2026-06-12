@@ -6,6 +6,7 @@ export const MIN_SCALE = 0.2;
 export const MAX_SCALE = 6;
 export const AUTOSAVE_MS = 1000;    // debounce after last stroke
 export const FLICK_FLIP_PX = 80;    // horizontal swipe distance to flip page
+export const SNAP_STEP = 28;        // snap-to-grid step = page grid spacing
 export const DB_NAME = 'mywhiteboard';
 export const DB_VERSION = 5; // v5: + imgfolders store (image-collection folders)
 
