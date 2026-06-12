@@ -291,6 +291,7 @@
 .lib-brand { font-family: 'Excalifont', 'Itim', var(--font-ui); font-size: 26px; line-height: 1; letter-spacing: 0.5px; }
 .lib-brand-line { display: block; width: 100%; height: 7px; color: var(--ink); opacity: 0.75; }
 .lib-count { font-size: 11px; color: var(--ink-mute); }
+.lib-storage { font-size: 10px; color: var(--ink-mute); opacity: 0.8; }
 
 .lib-search-wrap { position: relative; flex: 1; min-width: 160px; max-width: 380px; }
 .lib-search-wrap > svg {

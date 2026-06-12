@@ -43,6 +43,7 @@ export function initLibrary(rootEl) {
         <span class="lib-brand">MyWhiteBoard</span>
         ${BRAND_LINE}
         <span class="lib-count"></span>
+        <span class="lib-storage" title="Browser storage used by MyWhiteBoard"></span>
       </div>
       <div class="lib-search-wrap">
         ${ICON_SEARCH}
@@ -204,6 +205,23 @@ async function onFromPdf(e) {
 export async function refreshLibrary() {
   await renderFolders();
   await renderGrid();
+  updateStorageMeter();
+}
+
+// "12 MB of 240 GB" under the brand — quota awareness at a glance.
+async function updateStorageMeter() {
+  const el = mount.querySelector('.lib-storage');
+  if (!el || !navigator.storage?.estimate) return;
+  try {
+    const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+    el.textContent = quota ? `${fmtBytes(usage)} of ${fmtBytes(quota)} used` : '';
+  } catch { el.textContent = ''; }
+}
+
+function fmtBytes(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(n >= 1e10 ? 0 : 1) + ' GB';
+  if (n >= 1e6) return Math.round(n / 1e6) + ' MB';
+  return Math.max(1, Math.round(n / 1e3)) + ' KB';
 }
 
 async function onNewNotebook() {

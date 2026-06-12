@@ -35,6 +35,9 @@ let editorEl, libraryEl, quizHomeEl, quizEditEl;
 
 async function boot() {
   applyTheme();
+  // mark our IndexedDB as non-evictable — without this the browser may wipe
+  // all notebooks under disk pressure (best-effort storage)
+  navigator.storage?.persist?.().catch(() => {});
   editorEl = document.getElementById('editor');
   libraryEl = document.getElementById('library');
   quizHomeEl = document.getElementById('quizhome');
