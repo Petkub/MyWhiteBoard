@@ -17,7 +17,8 @@ import { flush as flushSave } from '../store/autosave.js';
 import { exportPagePNG } from '../export/png.js';
 import { exportNotebookPDF } from '../export/pdf.js';
 import { exportNotebookJSON } from '../export/json.js';
-import { insertImageFile } from './insert.js';
+import { insertImageFile, insertImageSrc } from './insert.js';
+import { allImagesDb, deleteImageDb } from '../store/db.js';
 import { importFileAsPages } from '../import/pageImport.js';
 import { refreshCursor } from '../input/pointer.js';
 import { modalAlert, modalConfirm } from './modal.js';
@@ -102,6 +103,53 @@ const normHex = (h) => {
   if (h.length === 4) h = '#' + [...h.slice(1)].map((ch) => ch + ch).join('');
   return h;
 };
+
+// ---- image collection popover (re-insert / remove saved images) ----
+function toggleImagePop() { refs.imgPop.hidden ? openImagePop() : (refs.imgPop.hidden = true); }
+
+async function openImagePop() {
+  refs.imgPop.hidden = false;
+  const grid = refs.ilGrid;
+  grid.innerHTML = '';
+  let imgs = [];
+  try { imgs = (await allImagesDb()).sort((a, b) => (b.created || 0) - (a.created || 0)); } catch { /* db */ }
+  refs.ilCount.textContent = String(imgs.length);
+  if (!imgs.length) {
+    const hint = document.createElement('span');
+    hint.className = 'tb-cp-hint';
+    hint.textContent = 'images you insert appear here';
+    grid.appendChild(hint);
+    return;
+  }
+  for (const r of imgs) {
+    const item = document.createElement('span');
+    item.className = 'tb-il-item';
+    const b = document.createElement('button');
+    b.className = 'tb-il-thumb';
+    b.title = 'Insert on this page';
+    const im = document.createElement('img');
+    im.src = r.src;
+    im.loading = 'lazy';
+    b.appendChild(im);
+    b.addEventListener('click', async () => {
+      refs.imgPop.hidden = true;
+      closeMenu();
+      try { await insertImageSrc(r.src); }
+      catch (err) { modalAlert({ title: 'Insert failed', message: err.message }); }
+    });
+    const x = document.createElement('button');
+    x.className = 'tb-cp-x';
+    x.title = 'Remove from collection';
+    x.textContent = '✕';
+    x.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try { await deleteImageDb(r.id); } catch { /* db */ }
+      openImagePop(); // rebuild
+    });
+    item.append(b, x);
+    grid.appendChild(item);
+  }
+}
 
 function toggleColorPop() { refs.colorPop.hidden ? openColorPop() : closeColorPop(); }
 function closeColorPop() { refs.colorPop.hidden = true; }
@@ -245,6 +293,7 @@ export function buildToolbar(mount) {
       <div class="tb-msec">insert</div>
       <div class="tb-mrow">
         <button class="tb-chip tb-img">image</button>
+        <button class="tb-chip tb-imglib">🖼 collection</button>
         <button class="tb-chip tb-importpage">PDF / image pages</button></div>
       <div class="tb-msec">export</div>
       <div class="tb-mrow">
@@ -257,6 +306,15 @@ export function buildToolbar(mount) {
         <button class="tb-chip tb-delpage danger" title="Delete this page">🗑 delete page</button></div>
       <input type="file" class="tb-imgfile" accept="image/*" hidden>
       <input type="file" class="tb-pagefile" accept="application/pdf,image/*" hidden>
+    </div>
+
+    <div class="tb-imgpop" hidden>
+      <div class="tb-cp-head">
+        <span class="tb-cp-title">image collection</span>
+        <span class="tb-cp-count tb-il-count"></span>
+        <button class="tb-cp-close tb-il-close" title="Close">✕</button>
+      </div>
+      <div class="tb-il-grid"></div>
     </div>
 
     <div class="tb-colorpop" hidden>
@@ -283,6 +341,9 @@ export function buildToolbar(mount) {
     title: root.querySelector('.tb-title'),
     tools: root.querySelector('.tb-tools'),
     colors: root.querySelector('.tb-colors'),
+    imgPop: root.querySelector('.tb-imgpop'),
+    ilGrid: root.querySelector('.tb-il-grid'),
+    ilCount: root.querySelector('.tb-il-count'),
     colorPop: root.querySelector('.tb-colorpop'),
     cpWell: root.querySelector('.tb-cp-well'),
     cpHex: root.querySelector('.tb-cp-hex'),
@@ -445,6 +506,12 @@ export function buildToolbar(mount) {
   const imgFile = root.querySelector('.tb-imgfile');
   const pageFile = root.querySelector('.tb-pagefile');
   root.querySelector('.tb-img').addEventListener('click', () => imgFile.click());
+  root.querySelector('.tb-imglib').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); toggleImagePop(); });
+  root.querySelector('.tb-il-close').addEventListener('click', () => { refs.imgPop.hidden = true; });
+  refs.imgPop.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', (e) => {
+    if (!refs.imgPop.hidden && !refs.imgPop.contains(e.target)) refs.imgPop.hidden = true;
+  });
   root.querySelector('.tb-importpage').addEventListener('click', () => pageFile.click());
   imgFile.addEventListener('change', async (e) => {
     const f = e.target.files[0]; e.target.value = ''; closeMenu();
@@ -463,6 +530,7 @@ export function buildToolbar(mount) {
   mount.appendChild(refs.sub);
   mount.appendChild(refs.menu);
   mount.appendChild(refs.colorPop);
+  mount.appendChild(refs.imgPop);
 }
 
 function toggleMenu() { refs.menu.hidden ? openMenu() : closeMenu(); }
