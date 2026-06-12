@@ -1283,3 +1283,39 @@
 .tb-il-thumb:hover { transform: translateY(-2px); box-shadow: 2px 3px 0 rgba(0,0,0,0.18); }
 .tb-il-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tb-il-item .tb-cp-x { top: -6px; right: -6px; }
+
+/* image collection: folder chips + add tile + move button */
+.tb-il-folders {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding-bottom: 8px; border-bottom: 1.5px dashed var(--line);
+}
+.tb-il-fwrap { position: relative; display: inline-flex; }
+.tb-il-fwrap .tb-cp-x { top: -5px; right: -5px; }
+.tb-il-fwrap:hover .tb-cp-x { opacity: 1; }
+.tb-il-fchip {
+  font-family: 'Excalifont', 'Itim', var(--font-ui); font-size: 13px; color: var(--ink);
+  background: var(--paper); border: 1.5px solid var(--ink); border-radius: 999px;
+  padding: 4px 12px; cursor: pointer; line-height: 1.2;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.tb-il-fchip:hover { background: var(--cream-soft); }
+.tb-il-fchip.active { background: var(--ink); color: var(--cream); }
+.tb-il-fadd { border-style: dashed; color: var(--ink-mute); border-color: var(--ink-mute); }
+.tb-il-fadd:hover { color: var(--ink); border-color: var(--ink); }
+
+.tb-il-add {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: var(--ink-mute);
+  border-style: dashed !important; border-color: var(--ink-mute) !important;
+  background: none !important;
+}
+.tb-il-add:hover { color: var(--ink); border-color: var(--ink) !important; }
+
+.tb-il-mv {
+  position: absolute; bottom: 5px; right: 5px;
+  background: var(--paper); border: 1.5px solid var(--ink); border-radius: 6px;
+  font-size: 11px; line-height: 1; padding: 3px 5px; cursor: pointer;
+  opacity: 0; transition: opacity var(--t-fast);
+}
+.tb-il-item:hover .tb-il-mv { opacity: 1; }
+.tb-il-mv:hover { background: var(--cream-soft); }

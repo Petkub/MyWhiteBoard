@@ -17,11 +17,14 @@ import { flush as flushSave } from '../store/autosave.js';
 import { exportPagePNG } from '../export/png.js';
 import { exportNotebookPDF } from '../export/pdf.js';
 import { exportNotebookJSON } from '../export/json.js';
-import { insertImageFile, insertImageSrc } from './insert.js';
-import { allImagesDb, deleteImageDb } from '../store/db.js';
+import { insertImageFile, insertImageSrc, addImagesToCollection } from './insert.js';
+import {
+  allImagesDb, deleteImageDb, putImageDb,
+  allImgFoldersDb, putImgFolderDb, deleteImgFolderDb,
+} from '../store/db.js';
 import { importFileAsPages } from '../import/pageImport.js';
 import { refreshCursor } from '../input/pointer.js';
-import { modalAlert, modalConfirm } from './modal.js';
+import { modalAlert, modalConfirm, modalPrompt, modalChoose } from './modal.js';
 import { updateTabTitle } from './tabs.js';
 import { toggleTheme, themeLabel } from './theme.js';
 
@@ -104,24 +107,95 @@ const normHex = (h) => {
   return h;
 };
 
-// ---- image collection popover (re-insert / remove saved images) ----
+// ---- image collection popover (curated library: folders + add/move/remove) ----
+let ilFolder = null; // active folder id, null = "all"
+
 function toggleImagePop() { refs.imgPop.hidden ? openImagePop() : (refs.imgPop.hidden = true); }
 
 async function openImagePop() {
   refs.imgPop.hidden = false;
+  let imgs = [], folders = [];
+  try {
+    [imgs, folders] = await Promise.all([allImagesDb(), allImgFoldersDb()]);
+  } catch { /* db */ }
+  imgs.sort((a, b) => (b.created || 0) - (a.created || 0));
+  folders.sort((a, b) => (a.created || 0) - (b.created || 0));
+  if (ilFolder && !folders.some((f) => f.id === ilFolder)) ilFolder = null;
+  renderIlFolders(folders);
+  renderIlGrid(imgs, folders);
+}
+
+function renderIlFolders(folders) {
+  const rail = refs.ilFolders;
+  rail.innerHTML = '';
+  const chip = (label, id) => {
+    const wrap = document.createElement('span');
+    wrap.className = 'tb-il-fwrap';
+    const b = document.createElement('button');
+    b.className = 'tb-il-fchip' + (ilFolder === id ? ' active' : '');
+    b.textContent = label;
+    b.addEventListener('click', () => { ilFolder = id; openImagePop(); });
+    wrap.appendChild(b);
+    if (id) {
+      const x = document.createElement('button');
+      x.className = 'tb-cp-x';
+      x.title = 'Delete folder (images stay in "all")';
+      x.textContent = '✕';
+      x.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        try {
+          // unfile the folder's images, then drop the folder
+          const imgs = await allImagesDb();
+          await Promise.all(imgs.filter((r) => r.folderId === id).map((r) => putImageDb({ ...r, folderId: null })));
+          await deleteImgFolderDb(id);
+        } catch { /* db */ }
+        if (ilFolder === id) ilFolder = null;
+        openImagePop();
+      });
+      wrap.appendChild(x);
+    }
+    return wrap;
+  };
+  rail.appendChild(chip('all', null));
+  for (const f of folders) rail.appendChild(chip(f.name, f.id));
+  const add = document.createElement('button');
+  add.className = 'tb-il-fchip tb-il-fadd';
+  add.textContent = '+ folder';
+  add.addEventListener('click', async () => {
+    const name = await modalPrompt({ title: 'New folder', label: 'Name', value: '', confirmText: 'Create' });
+    if (name === null || !name.trim()) return;
+    try {
+      const f = { id: 'imf' + Date.now().toString(36), name: name.trim().slice(0, 24), created: Date.now() };
+      await putImgFolderDb(f);
+      ilFolder = f.id;
+    } catch { /* db */ }
+    openImagePop();
+  });
+  rail.appendChild(add);
+}
+
+function renderIlGrid(imgs, folders) {
   const grid = refs.ilGrid;
   grid.innerHTML = '';
-  let imgs = [];
-  try { imgs = (await allImagesDb()).sort((a, b) => (b.created || 0) - (a.created || 0)); } catch { /* db */ }
-  refs.ilCount.textContent = String(imgs.length);
-  if (!imgs.length) {
+  const shown = ilFolder ? imgs.filter((r) => r.folderId === ilFolder) : imgs;
+  refs.ilCount.textContent = `${shown.length} image${shown.length === 1 ? '' : 's'}`;
+
+  // "+ add" tile uploads straight into the active folder
+  const add = document.createElement('button');
+  add.className = 'tb-il-thumb tb-il-add';
+  add.title = ilFolder ? 'Add images to this folder' : 'Add images';
+  add.textContent = '+';
+  add.addEventListener('click', () => refs.ilFile.click());
+  grid.appendChild(add);
+
+  if (!shown.length) {
     const hint = document.createElement('span');
     hint.className = 'tb-cp-hint';
-    hint.textContent = 'images you insert appear here';
+    hint.textContent = ilFolder ? 'empty folder — “+” adds images here' : 'no images yet — “+” to add some';
     grid.appendChild(hint);
     return;
   }
-  for (const r of imgs) {
+  for (const r of shown) {
     const item = document.createElement('span');
     item.className = 'tb-il-item';
     const b = document.createElement('button');
@@ -137,6 +211,19 @@ async function openImagePop() {
       try { await insertImageSrc(r.src); }
       catch (err) { modalAlert({ title: 'Insert failed', message: err.message }); }
     });
+    // move to folder
+    const mv = document.createElement('button');
+    mv.className = 'tb-il-mv';
+    mv.title = 'Move to folder';
+    mv.textContent = '📁';
+    mv.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const options = [{ label: 'All (no folder)', value: null }, ...folders.map((f) => ({ label: f.name, value: f.id }))];
+      const choice = await modalChoose({ title: 'Move image to', options });
+      if (choice === undefined) return;
+      try { await putImageDb({ ...r, folderId: choice }); } catch { /* db */ }
+      openImagePop();
+    });
     const x = document.createElement('button');
     x.className = 'tb-cp-x';
     x.title = 'Remove from collection';
@@ -144,9 +231,9 @@ async function openImagePop() {
     x.addEventListener('click', async (e) => {
       e.stopPropagation();
       try { await deleteImageDb(r.id); } catch { /* db */ }
-      openImagePop(); // rebuild
+      openImagePop();
     });
-    item.append(b, x);
+    item.append(b, mv, x);
     grid.appendChild(item);
   }
 }
@@ -314,7 +401,9 @@ export function buildToolbar(mount) {
         <span class="tb-cp-count tb-il-count"></span>
         <button class="tb-cp-close tb-il-close" title="Close">✕</button>
       </div>
+      <div class="tb-il-folders"></div>
       <div class="tb-il-grid"></div>
+      <input type="file" class="tb-il-file" accept="image/*" multiple hidden>
     </div>
 
     <div class="tb-colorpop" hidden>
@@ -343,6 +432,8 @@ export function buildToolbar(mount) {
     colors: root.querySelector('.tb-colors'),
     imgPop: root.querySelector('.tb-imgpop'),
     ilGrid: root.querySelector('.tb-il-grid'),
+    ilFolders: root.querySelector('.tb-il-folders'),
+    ilFile: root.querySelector('.tb-il-file'),
     ilCount: root.querySelector('.tb-il-count'),
     colorPop: root.querySelector('.tb-colorpop'),
     cpWell: root.querySelector('.tb-cp-well'),
@@ -508,9 +599,18 @@ export function buildToolbar(mount) {
   root.querySelector('.tb-img').addEventListener('click', () => imgFile.click());
   root.querySelector('.tb-imglib').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); toggleImagePop(); });
   root.querySelector('.tb-il-close').addEventListener('click', () => { refs.imgPop.hidden = true; });
+  refs.ilFile.addEventListener('change', async (e) => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    if (!files.length) return;
+    try { await addImagesToCollection(files, ilFolder); }
+    catch (err) { modalAlert({ title: 'Add failed', message: err.message }); }
+    openImagePop(); // rebuild with the new images
+  });
   refs.imgPop.addEventListener('click', (e) => e.stopPropagation());
   document.addEventListener('click', (e) => {
-    if (!refs.imgPop.hidden && !refs.imgPop.contains(e.target)) refs.imgPop.hidden = true;
+    // clicks inside a modal (folder prompt / move chooser) don't dismiss
+    if (!refs.imgPop.hidden && !refs.imgPop.contains(e.target) && !e.target.closest('.modal-backdrop')) refs.imgPop.hidden = true;
   });
   root.querySelector('.tb-importpage').addEventListener('click', () => pageFile.click());
   imgFile.addEventListener('change', async (e) => {

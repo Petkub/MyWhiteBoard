@@ -22,7 +22,10 @@ function open() {
         db.createObjectStore('quizzes', { keyPath: 'id' });
       }
       if (!db.objectStoreNames.contains('images')) {
-        db.createObjectStore('images', { keyPath: 'id' }); // inserted-image collection
+        db.createObjectStore('images', { keyPath: 'id' }); // image collection
+      }
+      if (!db.objectStoreNames.contains('imgfolders')) {
+        db.createObjectStore('imgfolders', { keyPath: 'id' }); // image-collection folders
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -52,11 +55,15 @@ export const putFolder = (f) => run('folders', 'readwrite', (os) => os.put(f));
 export const deleteFolder = (id) => run('folders', 'readwrite', (os) => os.delete(id));
 export const allFolders = () => run('folders', 'readonly', (os) => os.getAll());
 
-// ---- images (collection of inserted images) ----
-// record: { id, src, w, h, created }
+// ---- images (user-curated collection) ----
+// image record:  { id, src, w, h, created, folderId|null }
+// folder record: { id, name, created }
 export const putImageDb = (r) => run('images', 'readwrite', (os) => os.put(r));
 export const deleteImageDb = (id) => run('images', 'readwrite', (os) => os.delete(id));
 export const allImagesDb = () => run('images', 'readonly', (os) => os.getAll());
+export const putImgFolderDb = (f) => run('imgfolders', 'readwrite', (os) => os.put(f));
+export const deleteImgFolderDb = (id) => run('imgfolders', 'readwrite', (os) => os.delete(id));
+export const allImgFoldersDb = () => run('imgfolders', 'readonly', (os) => os.getAll());
 
 // ---- quizzes ----
 export const getQuizDb = (id) => run('quizzes', 'readonly', (os) => os.get(id));

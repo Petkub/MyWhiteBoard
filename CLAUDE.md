@@ -91,8 +91,9 @@ render/exporter.js offscreen, camera-free page rasterizer (used by PNG/PDF expor
 render/imageCache.js async image decode cache (drawStroke gets null until decoded)
 render/mathjax.js  LaTeX -> standalone SVG via MathJax (vendored, classic <script>)
 input/pointer.js   THE input brain (see below)
-store/db.js        IndexedDB v4: stores `notebooks`, `folders`, `quizzes`,
-                   `images` (collection of inserted images: {id,src,w,h,created})
+store/db.js        IndexedDB v5: stores `notebooks`, `folders`, `quizzes`,
+                   `images` ({id,src,w,h,created,folderId|null}) + `imgfolders`
+                   ({id,name,created}) — the user-curated image collection
 store/autosave.js  debounced save of the open notebook
 library/*.js        notebook+folder CRUD model + library home DOM ("sketchbook desk"
                     UI: tilted cards w/ ⋯ popover, folder divider-tabs w/ counts +
@@ -130,12 +131,16 @@ ui/pagesPanel.js   pages drawer: bottom film-strip of page thumbnails (slides
                    .modal-backdrop; active sheet auto-scrolled into view.
 ui/textEditor.js   floating, width-resizable <textarea> for text boxes
 ui/mathEditor.js   floating LaTeX editor (KaTeX live preview -> MathJax SVG object)
-ui/insert.js       insert image as a movable object. insertImageFile() also
-                   auto-saves the src to the `images` collection (deduped);
-                   insertImageSrc() re-inserts from it. The ☰ insert row's
-                   "🖼 collection" opens the .tb-imgpop picker (thumb = insert,
-                   hover-✕ = remove) — wired in .tb, reparented LAST like the
-                   other popovers.
+ui/insert.js       insert image as a movable object (insertImageFile/
+                   insertImageSrc — inserting does NOT touch the collection).
+                   addImagesToCollection(files, folderId) is the only writer.
+                   The ☰ insert row's "🖼 collection" opens the .tb-imgpop
+                   manager: folder chips ("all" + folders + "+ folder",
+                   hover-✕ deletes folder and unfiles its images), "+" tile
+                   uploads into the active folder, thumb = insert, 📁 = move
+                   via modalChoose, hover-✕ = remove. Wired in .tb, reparented
+                   LAST like the other popovers; outside-click close ignores
+                   .modal-backdrop clicks.
 ui/modal.js        promise-based modals (modalPrompt/Confirm/Alert/Choose/NewNotebook)
                    — use these, NOT native prompt()/confirm()/alert().
                    modalNewNotebook returns { title, bg, ph } for createNotebook opts.

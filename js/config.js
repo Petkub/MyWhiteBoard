@@ -7,7 +7,7 @@ export const MAX_SCALE = 6;
 export const AUTOSAVE_MS = 1000;    // debounce after last stroke
 export const FLICK_FLIP_PX = 80;    // horizontal swipe distance to flip page
 export const DB_NAME = 'mywhiteboard';
-export const DB_VERSION = 4; // v4: + images store (inserted-image collection)
+export const DB_VERSION = 5; // v5: + imgfolders store (image-collection folders)
 
 export const COLORS = ['#111111', '#d62828', '#1d3fb6', '#2f9e44', '#7048e8', '#e64980'];
 
