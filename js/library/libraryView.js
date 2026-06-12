@@ -208,14 +208,18 @@ export async function refreshLibrary() {
   updateStorageMeter();
 }
 
-// "12 MB of 240 GB" under the brand — quota awareness at a glance.
+// Storage bar under the brand — fill = share of the browser quota used.
 async function updateStorageMeter() {
   const el = mount.querySelector('.lib-storage');
   if (!el || !navigator.storage?.estimate) return;
   try {
     const { usage = 0, quota = 0 } = await navigator.storage.estimate();
-    el.textContent = quota ? `${fmtBytes(usage)} of ${fmtBytes(quota)} used` : '';
-  } catch { el.textContent = ''; }
+    if (!quota) { el.innerHTML = ''; return; }
+    const pct = Math.min(100, Math.max(2, (usage / quota) * 100)); // 2% sliver so it's never invisible
+    el.innerHTML = `
+      <span class="lib-storage-bar"><span class="lib-storage-fill${pct > 80 ? ' hot' : ''}" style="width:${pct.toFixed(1)}%"></span></span>
+      <span class="lib-storage-label">${fmtBytes(usage)} / ${fmtBytes(quota)}</span>`;
+  } catch { el.innerHTML = ''; }
 }
 
 function fmtBytes(n) {
