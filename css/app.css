@@ -256,7 +256,10 @@
 }
 
 .tb-status {
-  font-size: 12px; color: var(--ink-mute); padding-left: 8px; min-width: 64px;
+  /* FIXED width: the text cycles editing…/saving…/saved — a width change
+     re-balances the toolbar spacers and visibly shakes the center cluster */
+  font-size: 12px; color: var(--ink-mute); padding-left: 8px; width: 92px;
+  flex-shrink: 0; overflow: hidden; white-space: nowrap;
   font-family: 'Excalifont', 'Itim', var(--font-ui);
   display: inline-flex; align-items: center; gap: 5px;
 }
