@@ -5,7 +5,10 @@
 #tabbar {
   position: absolute; top: 0; left: 0; right: 0; height: 38px; z-index: 11;
   display: flex; align-items: flex-end; gap: 4px; padding: 0 8px;
-  background: var(--bg); border-bottom: 2px solid var(--ink); overflow-x: auto;
+  background: var(--bg); border-bottom: 2px solid var(--ink);
+  /* overflow-y must be explicit: x:auto alone coerces y to auto, and the
+     active tab overhangs 2px (toolbar merge) -> phantom vertical scrollbar */
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
 }
 #toolbar { position: absolute; inset: 38px 0 auto 0; z-index: 10; }
 #stage { position: absolute; inset: 90px 0 0 0; }
