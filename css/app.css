@@ -659,7 +659,8 @@
   transition: background var(--t-fast), transform var(--t-fast) var(--ease);
 }
 .modal-opt::after { content: '→'; opacity: 0; transition: opacity var(--t-fast); }
-.modal-opt:hover { background: var(--cream-soft); transform: translateX(2px); }
+/* no translateX here — it overflowed the scrollable list and spawned a scrollbar */
+.modal-opt:hover { background: var(--cream-soft); }
 .modal-opt:hover::after { opacity: 0.7; }
 .modal-bgpick { margin-top: 4px; }
 .modal-sizes { display: flex; gap: 6px; margin-top: 4px; }
