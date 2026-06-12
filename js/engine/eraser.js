@@ -56,6 +56,36 @@ export function eraseAt(strokes, p, r) {
   return removed;
 }
 
+// Scratch-out gesture detector (GoodNotes-style scribble-to-erase).
+// A scribble is: enough points, path much longer than its bbox diagonal
+// (dense back-and-forth), and several sharp direction reversals.
+export function isScribble(pts) {
+  if (!pts || pts.length < 12) return false;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, len = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    if (i) len += Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y);
+  }
+  const diag = Math.hypot(maxX - minX, maxY - minY);
+  if (diag < 8) return false;          // a dot / tap
+  if (len / diag < 3) return false;    // not dense enough to be a scratch
+  // sharp reversals between denoised direction samples (segments >= 3px)
+  let turns = 0, ax = 0, ay = 0, px = pts[0].x, py = pts[0].y, have = false;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i].x - px, dy = pts[i].y - py;
+    if (dx * dx + dy * dy < 9) continue;
+    if (have) {
+      const dot = ax * dx + ay * dy;
+      const cos = dot / (Math.hypot(ax, ay) * Math.hypot(dx, dy));
+      if (cos < -0.5) turns++;         // > ~120° turn = reversal
+    }
+    ax = dx; ay = dy; px = pts[i].x; py = pts[i].y; have = true;
+  }
+  return turns >= 5;
+}
+
 // Topmost stroke index whose ink passes within `tol` of point p (select tap).
 export function strokeIndexAt(strokes, p, tol = 8) {
   for (let i = strokes.length - 1; i >= 0; i--) {

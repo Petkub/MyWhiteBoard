@@ -10,7 +10,7 @@ export const clone = (o) => JSON.parse(JSON.stringify(o));
 // so tuning defaults later isn't masked by stale saved values.
 const PREF_KEY = 'wb-tools';
 const PREF_FIELDS = ['color', 'size', 'style', 'taper', 'kind', 'filled',
-  'cols', 'rows', 'arrowStart', 'arrowEnd', 'arrowSize', 'char'];
+  'cols', 'rows', 'arrowStart', 'arrowEnd', 'arrowSize', 'char', 'scratch'];
 
 function loadToolPrefs(tools) {
   try {

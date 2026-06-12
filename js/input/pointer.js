@@ -12,7 +12,7 @@ import {
 } from '../state.js';
 import { nodeAtRim, nodeCenter, nodeRadius } from '../engine/shapes.js';
 import { strokeBBox } from '../engine/strokes.js';
-import { eraseAt, strokeIndexAt } from '../engine/eraser.js';
+import { eraseAt, strokeIndexAt, isScribble } from '../engine/eraser.js';
 import { render } from '../render/renderer.js';
 import {
   drawLive, clearOverlay, drawSelection, drawRubber, drawLassoPath,
@@ -455,6 +455,20 @@ function releaseInk(e) {
     ink.stroke.points = [ink.stroke.points[0], { x: w.x, y: w.y, t: e.timeStamp, p: e.pressure || 0 }];
   } else {
     ink.stroke.points.push({ x: w.x, y: w.y, t: e.timeStamp, p: e.pressure || 0 });
+  }
+  // scratch-to-erase: a pen scribble over existing ink deletes it instead of
+  // committing; over empty paper it just inks (no accidental no-ops)
+  if (state.tool === 'pen' && curTool().scratch !== false && !ink.straight && isScribble(ink.stroke.points)) {
+    const snap = clone(curStrokes());
+    const r = Math.max(4, ink.stroke.size);
+    let changed = false;
+    for (const p of ink.stroke.points) if (eraseAt(curStrokes(), p, r)) changed = true;
+    if (changed) {
+      recordUndo(snap); // also re-renders + autosaves
+      clearOverlay();
+      ink.stroke = null; ink.filtered = null; ink.active = false;
+      return;
+    }
   }
   if (ink.stroke.points.length) addStroke(ink.stroke);
   clearOverlay(); render();

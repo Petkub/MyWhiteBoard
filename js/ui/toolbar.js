@@ -343,6 +343,7 @@ export function buildToolbar(mount) {
       <div class="tb-group tb-penstyle">
         <button data-style="fountain" class="tb-chip">fountain</button>
         <button data-style="ballpoint" class="tb-chip">ballpoint</button>
+        <button class="tb-chip tb-scratch" title="Scribble over ink to erase it">⌫ scratch</button>
       </div>
       <div class="tb-group tb-laseropts">
         <button data-lstyle="hold" class="tb-chip" title="Stroke stays while drawing, fades on release">hold</button>
@@ -456,6 +457,7 @@ export function buildToolbar(mount) {
     sizeR: root.querySelector('.tb-size-r'),
     sizeVal: root.querySelector('.tb-size-val'),
     penstyle: root.querySelector('.tb-penstyle'),
+    scratch: root.querySelector('.tb-scratch'),
     laseropts: root.querySelector('.tb-laseropts'),
     shapes: root.querySelector('.tb-shapes'),
     selectopts: root.querySelector('.tb-selectopts'),
@@ -544,6 +546,11 @@ export function buildToolbar(mount) {
     b.addEventListener('click', () => { curTool().style = b.dataset.style; saveToolPrefs(); syncPenStyle(); }));
   refs.laseropts.querySelectorAll('[data-lstyle]').forEach((b) =>
     b.addEventListener('click', () => { state.tools.laser.style = b.dataset.lstyle; saveToolPrefs(); syncLaserOpts(); }));
+  refs.scratch.addEventListener('click', () => {
+    state.tools.pen.scratch = state.tools.pen.scratch === false;
+    saveToolPrefs();
+    syncPenStyle();
+  });
 
   refs.fill.addEventListener('click', () => { const t = curTool(); t.filled = !t.filled; saveToolPrefs(); syncShapeOpts(); });
   refs.shapeopts.querySelectorAll('.tb-step-b[data-dim]').forEach((b) =>
@@ -735,9 +742,10 @@ function syncColors() {
 }
 
 function syncPenStyle() {
-  const st = curTool().style;
+  const st = state.tools.pen.style;
   refs.penstyle.querySelectorAll('[data-style]').forEach((b) =>
     b.classList.toggle('active', b.dataset.style === st));
+  refs.scratch.classList.toggle('active', state.tools.pen.scratch !== false);
 }
 
 function syncShapes() {

@@ -19,6 +19,7 @@ export const TOOL_DEFAULTS = {
   pen: {
     color: '#111111', size: 3, min: 0.5, max: 12, step: 0.5,
     stabilize: 0.65, sharpness: 0.28, style: 'fountain', taper: 0.7,
+    scratch: true, // scribble over ink with the pen -> erases it (GoodNotes-style)
   },
   highlighter: {
     color: '#fde047', size: 18, min: 6, max: 48, step: 1,
