@@ -28,8 +28,19 @@ function open() {
         db.createObjectStore('imgfolders', { keyPath: 'id' }); // image-collection folders
       }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      // a NEWER version is being opened in another tab — release our
+      // connection so that tab's upgrade isn't blocked forever
+      db.onversionchange = () => { db.close(); dbp = null; };
+      resolve(db);
+    };
+    req.onblocked = () => {
+      // an older tab without the versionchange handler still holds the DB;
+      // we keep waiting — closing that tab lets this open() complete
+      console.warn('IndexedDB upgrade blocked by another open tab');
+    };
+    req.onerror = () => { dbp = null; reject(req.error); }; // don't cache failure
   });
   return dbp;
 }
