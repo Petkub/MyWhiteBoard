@@ -47,6 +47,7 @@ const ICONS = {
 };
 
 const LOCK_ICON = svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>');
+const SCRATCH_ICON = svg('<path d="M3 18 6.5 6l3 12L13 6l3 12 4.5-12"/>');
 const MENU_ICON = svg('<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>');
 const UNDO_ICON = svg('<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>');
 const REDO_ICON = svg('<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>');
@@ -343,7 +344,7 @@ export function buildToolbar(mount) {
       <div class="tb-group tb-penstyle">
         <button data-style="fountain" class="tb-chip">fountain</button>
         <button data-style="ballpoint" class="tb-chip">ballpoint</button>
-        <button class="tb-chip tb-scratch" title="Scribble over ink to erase it">⌫ scratch</button>
+        <button class="tb-chip tb-scratch" title="Scribble over ink to erase it">scratch</button>
       </div>
       <div class="tb-group tb-laseropts">
         <button data-lstyle="hold" class="tb-chip" title="Stroke stays while drawing, fades on release">hold</button>
@@ -481,6 +482,7 @@ export function buildToolbar(mount) {
 
   refs.burger.innerHTML = MENU_ICON;
   root.querySelector('.tb-lock').innerHTML = `${LOCK_ICON}<span>lock</span>`;
+  refs.scratch.innerHTML = `${SCRATCH_ICON}<span>scratch</span>`;
   root.querySelector('.tb-undo').innerHTML = UNDO_ICON;
   root.querySelector('.tb-redo').innerHTML = REDO_ICON;
 

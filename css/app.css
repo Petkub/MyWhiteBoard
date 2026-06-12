@@ -1329,3 +1329,6 @@
 
 /* pen/touch have no hover — collection remove/move controls stay visible */
 .tb-cp-x, .tb-il-mv { opacity: 1; }
+
+.tb-scratch { display: inline-flex; align-items: center; gap: 5px; }
+.tb-scratch svg { width: 14px; height: 14px; }

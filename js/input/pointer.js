@@ -75,6 +75,7 @@ export function initInput(overlayCanvas) {
   el.addEventListener('pointerup', onUp);
   el.addEventListener('pointercancel', onUp);
   el.addEventListener('wheel', onWheel, { passive: false });
+  el.addEventListener('contextmenu', (e) => e.preventDefault()); // right-click stays inert
   // brush-size ring cursor (shows actual eraser/highlighter/pen size on paper)
   cursorEl = document.createElement('div');
   cursorEl.className = 'brush-cursor';
@@ -161,12 +162,13 @@ function pickSpreadPage(s) {
 function isInkInput(e) {
   if (state.tool === 'hand') return false;
   if (e.pointerType === 'pen') return true;
-  if (e.pointerType === 'mouse') return !spaceDown && e.button !== 1; // middle button = pan
+  if (e.pointerType === 'mouse') return !spaceDown && e.button === 0; // only left inks (middle = pan, right = nothing)
   return false; // touch -> gesture
 }
 
 // ----------------------------------------------------------------- pointer down
 function onDown(e) {
+  if (e.pointerType === 'mouse' && e.button === 2) return; // right-click: inert on the canvas
   const s = localXY(e);
   if (isInkInput(e)) {
     if (gesture.pointers.size) return; // gesture owns the surface
