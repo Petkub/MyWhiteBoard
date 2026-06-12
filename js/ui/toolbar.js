@@ -51,6 +51,7 @@ const UNDO_ICON = svg('<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0
 const REDO_ICON = svg('<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>');
 const BOOK_ICON = svg('<path d="M2 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/>');
 const PAGES_ICON = svg('<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/>');
+const IMGLIB_ICON = svg('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>');
 
 const TOOLS = [
   ['pen', 'Pen (P)'],
@@ -110,10 +111,15 @@ const normHex = (h) => {
 // ---- image collection popover (curated library: folders + add/move/remove) ----
 let ilFolder = null; // active folder id, null = "all"
 
-function toggleImagePop() { refs.imgPop.hidden ? openImagePop() : (refs.imgPop.hidden = true); }
+const syncImgLibBtn = () =>
+  root.querySelector('.tb-imglib-btn')?.classList.toggle('active', !refs.imgPop.hidden);
+
+function toggleImagePop() { refs.imgPop.hidden ? openImagePop() : closeImagePop(); }
+function closeImagePop() { refs.imgPop.hidden = true; syncImgLibBtn(); }
 
 async function openImagePop() {
   refs.imgPop.hidden = false;
+  syncImgLibBtn();
   let imgs = [], folders = [];
   try {
     [imgs, folders] = await Promise.all([allImagesDb(), allImgFoldersDb()]);
@@ -206,7 +212,7 @@ function renderIlGrid(imgs, folders) {
     im.loading = 'lazy';
     b.appendChild(im);
     b.addEventListener('click', async () => {
-      refs.imgPop.hidden = true;
+      closeImagePop();
       closeMenu();
       try { await insertImageSrc(r.src); }
       catch (err) { modalAlert({ title: 'Insert failed', message: err.message }); }
@@ -478,6 +484,13 @@ export function buildToolbar(mount) {
     b.addEventListener('click', () => { setTool(id); syncTool(); });
     refs.tools.appendChild(b);
   });
+  // image collection lives in the tray too (not a drawing tool — opens the picker)
+  const imgLibBtn = document.createElement('button');
+  imgLibBtn.className = 'tb-tool tb-imglib-btn';
+  imgLibBtn.title = 'Image collection';
+  imgLibBtn.innerHTML = IMGLIB_ICON;
+  imgLibBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleImagePop(); });
+  refs.tools.appendChild(imgLibBtn);
 
   renderSwatches();
   // color popover: well <-> hex stay in sync; Enter or "+ add" commits
@@ -598,7 +611,7 @@ export function buildToolbar(mount) {
   const pageFile = root.querySelector('.tb-pagefile');
   root.querySelector('.tb-img').addEventListener('click', () => imgFile.click());
   root.querySelector('.tb-imglib').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); toggleImagePop(); });
-  root.querySelector('.tb-il-close').addEventListener('click', () => { refs.imgPop.hidden = true; });
+  root.querySelector('.tb-il-close').addEventListener('click', closeImagePop);
   refs.ilFile.addEventListener('change', async (e) => {
     const files = [...e.target.files];
     e.target.value = '';
@@ -610,7 +623,7 @@ export function buildToolbar(mount) {
   refs.imgPop.addEventListener('click', (e) => e.stopPropagation());
   document.addEventListener('click', (e) => {
     // clicks inside a modal (folder prompt / move chooser) don't dismiss
-    if (!refs.imgPop.hidden && !refs.imgPop.contains(e.target) && !e.target.closest('.modal-backdrop')) refs.imgPop.hidden = true;
+    if (!refs.imgPop.hidden && !refs.imgPop.contains(e.target) && !e.target.closest('.modal-backdrop')) closeImagePop();
   });
   root.querySelector('.tb-importpage').addEventListener('click', () => pageFile.click());
   imgFile.addEventListener('change', async (e) => {

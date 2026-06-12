@@ -134,8 +134,9 @@ ui/mathEditor.js   floating LaTeX editor (KaTeX live preview -> MathJax SVG obje
 ui/insert.js       insert image as a movable object (insertImageFile/
                    insertImageSrc — inserting does NOT touch the collection).
                    addImagesToCollection(files, folderId) is the only writer.
-                   The ☰ insert row's "🖼 collection" opens the .tb-imgpop
-                   manager: folder chips ("all" + folders + "+ folder",
+                   The tools-tray image button (.tb-imglib-btn, not a drawing
+                   tool) and the ☰ insert row's "🖼 collection" both open the
+                   .tb-imgpop manager: folder chips ("all" + folders + "+ folder",
                    hover-✕ deletes folder and unfiles its images), "+" tile
                    uploads into the active folder, thumb = insert, 📁 = move
                    via modalChoose, hover-✕ = remove. Wired in .tb, reparented

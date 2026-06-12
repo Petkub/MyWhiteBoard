@@ -1319,3 +1319,6 @@
 }
 .tb-il-item:hover .tb-il-mv { opacity: 1; }
 .tb-il-mv:hover { background: var(--cream-soft); }
+
+/* pen/touch have no hover — collection remove/move controls stay visible */
+.tb-cp-x, .tb-il-mv { opacity: 1; }
