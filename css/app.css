@@ -538,7 +538,7 @@
   position: absolute; top: 58px; left: 10px; z-index: 30;
   display: flex; flex-direction: column; gap: 7px;
   background: var(--paper); border: 2px solid var(--ink); border-radius: 12px;
-  padding: 12px; width: 286px;
+  padding: 12px; width: min(286px, calc(100vw - 16px));
   box-shadow: 4px 5px 0 rgba(0,0,0,0.16);
   animation: lib-pop-in 140ms var(--ease);
 }
@@ -1063,7 +1063,7 @@
 
 /* ---- floating LaTeX (math) editor ---- */
 .math-editor {
-  position: absolute; z-index: 22; width: 340px;
+  position: absolute; z-index: 22; width: min(340px, calc(100vw - 16px));
   background: var(--paper); border: 2px solid var(--ink); border-radius: 12px;
   padding: 10px; box-shadow: 4px 6px 0 rgba(0,0,0,0.16);
   animation: lib-pop-in 140ms var(--ease);
@@ -1340,3 +1340,51 @@
 
 .tb-scratch { display: inline-flex; align-items: center; gap: 5px; }
 .tb-scratch svg { width: 14px; height: 14px; }
+
+/* ===== responsive — tablet / phone =====
+   The main .tb bar already scrolls horizontally; these rules shrink chrome so
+   less of it needs to scroll, and stack quiz layouts on narrow screens. */
+@media (max-width: 900px) {
+  .tb { gap: 5px; padding: 0 8px; scrollbar-width: thin; }
+  .tb-status { display: none; }             /* frees 92px; autosave still runs */
+  .tb-size input { width: 64px; }
+  .tb-sep { margin: 0 2px; }
+  .lib-head, .qh-head { padding: 11px 14px; gap: 10px; }
+  .qe-head { flex-wrap: wrap; row-gap: 8px; padding: 12px 14px; }
+  .lib-grid, .qh-grid { padding: 20px 16px 60px; gap: 16px; }
+}
+
+@media (max-width: 640px) {
+  /* editor chrome */
+  .tab { width: 120px; }
+  .tb-tool { min-width: 30px; }
+  .tb-swatch { width: 21px; height: 21px; }
+
+  /* library / quiz home cards go single-ish column via smaller minmax */
+  .lib-grid, .qh-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .lib-brand { font-size: 21px; }
+
+  /* quiz editor: choice tiles stack */
+  .qz-choices { grid-template-columns: 1fr; padding: 0 14px; gap: 10px; }
+  .qz-question { margin: 14px; padding: 14px; }
+  .qz-addchoice { margin: 14px 14px 32px; }
+
+  /* quiz play (solo + live player share qp-*): stack tiles, shrink type */
+  .qp-stage { padding: 14px 10px; }
+  .qp-choices { grid-template-columns: 1fr; gap: 10px; }
+  .qp-tile { padding: 14px; min-height: 58px; font-size: 17px; }
+  .qp-question { font-size: 21px; margin: 10px auto; }
+  .qp-question .qc-code { font-size: 16px; }
+  .qp-question .qc-img { max-height: 150px; }
+  .qp-result-score { font-size: 56px; }
+  .qp-time { font-size: 16px; min-width: 52px; }
+
+  /* live screens */
+  .lv-bigcode { font-size: 38px; letter-spacing: 6px; padding: 6px 16px; }
+  .lv-qbox { font-size: 17px; }
+  .lv-h1 { font-size: 21px; }
+  .lv-top { flex-wrap: wrap; row-gap: 6px; }
+
+  /* pages drawer thumbs a bit smaller */
+  .pd-thumb { height: 96px; }
+}

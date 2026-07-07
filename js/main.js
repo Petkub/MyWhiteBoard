@@ -16,7 +16,7 @@ import { initInput, setTextHandler, setMathHandler, setCameraChangeHandler } fro
 import { initTextEditor, openTextEditor, isEditing, syncTextEditor } from './ui/textEditor.js';
 import { initMathEditor, openMathEditor, isMathEditing, syncMathEditor } from './ui/mathEditor.js';
 import { setReadyCallback } from './render/imageCache.js';
-import { resetTop, fitWidth, setCameraBounds, setWorldWidth } from './viewport/camera.js';
+import { resetTop, fitPage, setCameraBounds, setWorldWidth } from './viewport/camera.js';
 import { spreadPh, spreadWorldWidth } from './state.js';
 import { flush as flushSave, bindStatus, schedule as scheduleSave } from './store/autosave.js';
 import { buildToolbar, statusEl, syncPages, syncAll } from './ui/toolbar.js';
@@ -75,7 +75,12 @@ async function boot() {
   }
 
   state.onMutate = () => { render(); reflectSelection(); scheduleSave(); };
-  state.onPageChange = () => { resetTop(viewport().vw); render(); clearOverlay(); syncPages(); };
+  state.onPageChange = () => {
+    const { vw, vh } = viewport();
+    if (spreadPh()) fitPage(vw, vh); // fixed-height page (PDF/A4/…) -> fit whole page on screen
+    resetTop(vw, vh);
+    render(); clearOverlay(); syncPages();
+  };
   state.onPageQuiet = () => { render(); clearOverlay(); syncPages(); }; // spread-page switch
 
 
@@ -117,7 +122,8 @@ async function route() {
     openTab(nb.id, nb.title || 'Untitled');
     show('editor');
     resizeRenderer(); resizeOverlay();
-    fitWidth(viewport().vw); resetTop(viewport().vw);
+    const { vw, vh } = viewport();
+    fitPage(vw, vh); resetTop(vw, vh);
     render(); clearOverlay(); syncAll();
   } else if (r.view === 'quizzes') {
     await flushSave();
@@ -179,7 +185,9 @@ function bindKeys() {
 
   window.addEventListener('resize', () => {
     if (editorEl.style.display === 'none') return;
-    resizeRenderer(); fitWidth(viewport().vw); render();
+    resizeRenderer(); resizeOverlay();
+    const { vw, vh } = viewport();
+    fitPage(vw, vh); render();
   });
 }
 

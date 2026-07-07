@@ -30,9 +30,15 @@ let pageH = () => null, viewH = () => 0;
 export function setCameraBounds(phFn, vhFn) { pageH = phFn; vhFn && (viewH = vhFn); }
 
 function clampVertical() {
-  const top = -200; // small overscroll at top
-  if (camera.y < top) camera.y = top;
+  let top = -200; // small overscroll at top
   const ph = pageH();
+  if (ph) {
+    // page shorter than the viewport (fit-to-screen) -> allow the centered
+    // position so the clamp doesn't yank a centered page back up
+    const overflow = ph * camera.scale - viewH();
+    if (overflow < 0) top = Math.min(top, overflow / 2);
+  }
+  if (camera.y < top) camera.y = top;
   if (ph) {
     const maxY = Math.max(top, ph * camera.scale - viewH() + 200);
     if (camera.y > maxY) camera.y = maxY;
@@ -60,7 +66,19 @@ export function fitWidth(vw) {
   camera.scale = clamp(vw / (worldW() + 48), MIN_SCALE, 1);
 }
 
-export function resetTop(vw) {
+// Fit the WHOLE page on screen when it has a fixed height (PDF/image imports,
+// A4/1:1/16:9 page sizes): contain-fit = min of width-fit and height-fit.
+// Infinite pages fall back to width-fit.
+export function fitPage(vw, vh) {
+  const ph = pageH();
+  if (ph && vh) camera.scale = clamp(Math.min(vw / (worldW() + 48), (vh - 32) / ph), MIN_SCALE, 1);
+  else fitWidth(vw);
+}
+
+export function resetTop(vw, vh = 0) {
   camera.y = -24; // small top gutter
+  const ph = pageH();
+  // fixed page fully visible -> center it vertically
+  if (ph && vh && ph * camera.scale < vh) camera.y = (ph * camera.scale - vh) / 2;
   centerH(vw);
 }

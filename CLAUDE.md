@@ -83,6 +83,11 @@ engine/text.js     word-wrap + height measurement (Excalifont, vendored)
 viewport/camera.js world<->screen transform; pan/zoom/fit (camera is a shared singleton).
                    setCameraBounds (wired in main.js) clamps vertical pan/zoom to the
                    page bottom when the current page has a fixed height (page.ph).
+                   fitPage(vw,vh): fixed-ph pages (PDF/image imports, A4/1:1/16:9)
+                   contain-fit the whole page on screen (min of width/height fit),
+                   vertically centered by resetTop(vw,vh); infinite pages fall back
+                   to fitWidth. Called on route open, page change (fixed pages only),
+                   window resize, spread toggle, page-size pick.
 render/paint.js    drawStroke(ctx, s, nodeMap) — single source of truth for how every
                    stroke type paints. Shared by committed layer, live overlay, and export.
 render/renderer.js committed layer: page bg + strokes, viewport culling, edge-under-node pass

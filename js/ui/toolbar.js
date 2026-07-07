@@ -10,7 +10,7 @@ import {
 } from '../state.js';
 import { togglePagesPanel, refreshPagesPanel } from './pagesPanel.js';
 import { goLibrary } from '../router.js';
-import { panBy, fitWidth, resetTop } from '../viewport/camera.js';
+import { fitPage, resetTop } from '../viewport/camera.js';
 import { render, viewport } from '../render/renderer.js';
 import { clearOverlay } from '../render/overlay.js';
 import { flush as flushSave } from '../store/autosave.js';
@@ -577,7 +577,8 @@ export function buildToolbar(mount) {
   refs.sizePick.querySelectorAll('[data-ph]').forEach((b) =>
     b.addEventListener('click', () => {
       setPageHeight(Number(b.dataset.ph));
-      panBy(0, 0);        // re-clamp camera if we're now past the page bottom
+      const { vw, vh } = viewport();
+      fitPage(vw, vh); resetTop(vw, vh); // fixed size chosen -> fit page on screen
       state.onMutate();
       syncPages();
     }));
@@ -594,8 +595,8 @@ export function buildToolbar(mount) {
   spreadBtn.addEventListener('click', () => {
     toggleSpread();
     spreadBtn.classList.toggle('active', state.spread);
-    const vw = viewport().vw;
-    fitWidth(vw); resetTop(vw);
+    const { vw, vh } = viewport();
+    fitPage(vw, vh); resetTop(vw, vh);
     render(); clearOverlay(); syncPages();
   });
   root.querySelector('.tb-clear').addEventListener('click', async () => {
