@@ -71,7 +71,9 @@ export function fitWidth(vw) {
 // Infinite pages fall back to width-fit.
 export function fitPage(vw, vh) {
   const ph = pageH();
-  if (ph && vh) camera.scale = clamp(Math.min(vw / (worldW() + 48), (vh - 32) / ph), MIN_SCALE, 1);
+  // fixed pages may UPSCALE past 1 (PDF rasters are baked at ~3x, stays sharp)
+  // so a landscape 16:9 page fills a wide screen instead of sitting tiny at 1x
+  if (ph && vh) camera.scale = clamp(Math.min(vw / (worldW() + 48), (vh - 32) / ph), MIN_SCALE, MAX_SCALE);
   else fitWidth(vw);
 }
 
