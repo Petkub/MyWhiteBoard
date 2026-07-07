@@ -16,6 +16,8 @@ import { initInput, setTextHandler, setMathHandler, setCameraChangeHandler } fro
 import { initTextEditor, openTextEditor, isEditing, syncTextEditor } from './ui/textEditor.js';
 import { initMathEditor, openMathEditor, isMathEditing, syncMathEditor } from './ui/mathEditor.js';
 import { setReadyCallback } from './render/imageCache.js';
+import { setMathMeasure } from './engine/text.js';
+import { measureMath, setMathReadyCallback } from './render/mathInline.js';
 import { resetTop, fitPage, setCameraBounds, setWorldWidth } from './viewport/camera.js';
 import { spreadPh, spreadWorldWidth } from './state.js';
 import { flush as flushSave, bindStatus, schedule as scheduleSave } from './store/autosave.js';
@@ -56,6 +58,8 @@ async function boot() {
   setMathHandler(openMathEditor);
   setCameraChangeHandler(() => { syncTextEditor(); syncMathEditor(); syncZoomHud(); });
   setReadyCallback(() => render()); // async image decode -> repaint
+  setMathMeasure(measureMath);      // inline $...$ math boxes in text layout
+  setMathReadyCallback(() => render()); // formula rendered -> reflow + repaint
   const stageEl = document.getElementById('stage');
   setCameraBounds(() => spreadPh(), () => stageEl.clientHeight);
   setWorldWidth(() => spreadWorldWidth());

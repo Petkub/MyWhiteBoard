@@ -53,6 +53,10 @@ stroke   = one of:
   node            : shape + { id, label? }     edge: { kind:'edge', from:<nodeId>, to:<nodeId> }
   image           : { tool:'image', src, x, y, w, h }
   text            : { tool:'text', x, y, w, text, size, color }   // Excalifont (vendored), falls back to Inter
+                    // Typst-style inline math: $...$ spans in `text` render as
+                    // MathJax SVG boxes inline (render/mathInline.js cache);
+                    // source stays plain text — the editor shows `$x^2$`, the
+                    // canvas shows the rendered formula
   emoji           : { tool:'emoji', char, x, y, size }
   math            : { tool:'math', latex, color, size, x, y, w, h, src }
                     // LaTeX -> MathJax SVG data-URL (render/mathjax.js, vendored offline);
@@ -79,7 +83,17 @@ engine/shapes.js   shape path-data; node/edge helpers (nodeCenter/Radius/AtRim/M
 engine/rough.js    hand-drawn shape rendering via rough.js (vendored); roughDrawable()/
                    renderDrawable()/drawArrowHead(). Seeded per shape for stability.
 engine/eraser.js   segment-distance hit-test (eraser + select)
-engine/text.js     word-wrap + height measurement (Excalifont, vendored)
+engine/text.js     text layout: tokenize (words / spaces / $...$ math spans) +
+                   greedy wrap + height. layoutText() returns positioned items
+                   per line (math spans = unbreakable words that grow line
+                   height); shared by paint + textHeight so bbox matches paint.
+                   Math box sizes come via setMathMeasure hook (wired in
+                   main.js to render/mathInline.js — engine stays import-pure).
+render/mathInline.js inline-math cache: measureMath(latex,size) metrics +
+                   mathSrc(latex,size,color) SVG data URL (2x supersampled,
+                   inline display mode, size quantized to ints so resize drags
+                   don't flood the cache). Estimate until MathJax lands, then
+                   setMathReadyCallback -> render() reflows.
 viewport/camera.js world<->screen transform; pan/zoom/fit (camera is a shared singleton).
                    setCameraBounds (wired in main.js) clamps vertical pan/zoom to the
                    page bottom when the current page has a fixed height (page.ph).

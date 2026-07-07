@@ -5,7 +5,8 @@
 import { fountainStroke, buildPolyline } from '../engine/strokes.js';
 import { shapePath, isClosed, nodeCenter, nodeRadius } from '../engine/shapes.js';
 import { roughDrawable, renderDrawable, drawArrowHead } from '../engine/rough.js';
-import { wrapText, fontString, LINE_RATIO } from '../engine/text.js';
+import { layoutText, fontString, LINE_RATIO } from '../engine/text.js';
+import { mathSrc } from './mathInline.js';
 import { get as getImage } from './imageCache.js';
 
 export function drawStroke(ctx, s, nodeMap = null) {
@@ -107,13 +108,33 @@ function drawImage(ctx, s) {
   }
 }
 
+// Text with inline $...$ math: words fillText'd, math spans drawn as cached
+// MathJax SVGs (light box placeholder while the render/decode is in flight —
+// mathInline's onReady and imageCache's ready callback both trigger repaints).
 function drawText(ctx, s) {
-  const lines = wrapText(s.text, s.size, s.w);
+  const { lines } = layoutText(s.text, s.size, s.w);
   ctx.fillStyle = s.color;
   ctx.font = fontString(s.size);
   ctx.textBaseline = 'top';
-  const lh = s.size * LINE_RATIO;
-  for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], s.x, s.y + i * lh);
+  for (const L of lines) {
+    const textTop = s.y + L.y + (L.h - s.size * LINE_RATIO) / 2; // center text runs in a math-tall line
+    for (const it of L.items) {
+      if (it.kind === 'math') {
+        const src = mathSrc(it.latex, s.size, s.color);
+        const img = src && getImage(src);
+        const my = s.y + L.y + (L.h - it.h) / 2;
+        if (img) ctx.drawImage(img, s.x + it.x, my, it.w, it.h);
+        else {
+          ctx.save();
+          ctx.globalAlpha = 0.12;
+          ctx.fillRect(s.x + it.x, my, it.w, it.h);
+          ctx.restore();
+        }
+      } else if (it.kind === 'word') {
+        ctx.fillText(it.str, s.x + it.x, textTop);
+      }
+    }
+  }
   ctx.textBaseline = 'alphabetic';
 }
 

@@ -25,9 +25,10 @@ function ensure() {
 }
 
 // Render LaTeX to { src (svg data URL), w, h } at the given pixel font size.
-export async function renderMathToImage(latex, color = '#111', fontPx = 30) {
+// display:false = inline layout (compact fractions/limits) for in-text math.
+export async function renderMathToImage(latex, color = '#111', fontPx = 30, display = true) {
   const MJ = await ensure();
-  const node = MJ.tex2svg(latex, { display: true });
+  const node = MJ.tex2svg(latex, { display });
   const svg = node.querySelector('svg');
   if (!svg) throw new Error('render failed');
   svg.style.color = color; // paths use fill="currentColor"

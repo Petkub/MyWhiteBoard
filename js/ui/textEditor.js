@@ -47,7 +47,7 @@ function spawn(initial) {
   ta = document.createElement('textarea');
   ta.className = 'text-editor';
   ta.value = initial;
-  ta.placeholder = 'type…';
+  ta.placeholder = 'type… ($x^2$ = math)';
   const scr = worldToScreen(startX + curPageOffsetX(), startY);
   const px = size * camera.scale;
   lastScale = camera.scale;
