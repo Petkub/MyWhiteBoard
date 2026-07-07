@@ -66,8 +66,7 @@
 .tb-swatch-add:hover { background: var(--cream-soft); }
 
 .tb-size, .tb-bg { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); }
-.tb-size input { width: 90px; accent-color: var(--ink); }
-.tb-size-val { min-width: 24px; text-align: right; color: var(--ink); }
+.tb-size-val { min-width: 24px; text-align: center; color: var(--ink); }
 
 /* paper-style picker: mini page tiles with the real pattern */
 .tb-bgpick { display: flex; gap: 6px; }
@@ -1347,7 +1346,6 @@
 @media (max-width: 900px) {
   .tb { gap: 5px; padding: 0 8px; scrollbar-width: thin; }
   .tb-status { display: none; }             /* frees 92px; autosave still runs */
-  .tb-size input { width: 64px; }
   .tb-sep { margin: 0 2px; }
   .lib-head, .qh-head { padding: 11px 14px; gap: 10px; }
   .qe-head { flex-wrap: wrap; row-gap: 8px; padding: 12px 14px; }

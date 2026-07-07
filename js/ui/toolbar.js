@@ -326,8 +326,9 @@ export function buildToolbar(mount) {
     <div class="tb-group tb-colors"></div>
     <div class="tb-sep"></div>
     <span class="tb-size">size
-      <input type="range" class="tb-size-r" min="1" max="40" step="1">
+      <button class="tb-step-b tb-size-dec" title="smaller">−</button>
       <span class="tb-size-val">3</span>
+      <button class="tb-step-b tb-size-inc" title="bigger">+</button>
     </span>
     <div class="tb-spacer"></div>
     <div class="tb-group tb-pages">
@@ -456,7 +457,8 @@ export function buildToolbar(mount) {
     cpGrid: root.querySelector('.tb-cp-grid'),
     cpCount: root.querySelector('.tb-cp-count'),
     sizeBox: root.querySelector('.tb-size'),
-    sizeR: root.querySelector('.tb-size-r'),
+    sizeDec: root.querySelector('.tb-size-dec'),
+    sizeInc: root.querySelector('.tb-size-inc'),
     sizeVal: root.querySelector('.tb-size-val'),
     penstyle: root.querySelector('.tb-penstyle'),
     scratch: root.querySelector('.tb-scratch'),
@@ -537,14 +539,18 @@ export function buildToolbar(mount) {
     refs.emojiopts.appendChild(b);
   });
 
-  refs.sizeR.addEventListener('input', () => {
+  const stepSize = (dir) => {
     const t = curTool();
     if (!('size' in t)) return;
-    const v = Number(refs.sizeR.value);
+    const step = t.step ?? 1;
+    // toFixed strips float drift from fractional steps (1.5 + 0.5, not 1.9999…)
+    const v = Math.min(t.max ?? 40, Math.max(t.min ?? 1, Number((t.size + dir * step).toFixed(2))));
     setSize(v);
     refs.sizeVal.textContent = v;
     refreshCursor();
-  });
+  };
+  refs.sizeDec.addEventListener('click', () => stepSize(-1));
+  refs.sizeInc.addEventListener('click', () => stepSize(1));
   refs.penstyle.querySelectorAll('[data-style]').forEach((b) =>
     b.addEventListener('click', () => { curTool().style = b.dataset.style; saveToolPrefs(); syncPenStyle(); }));
   refs.laseropts.querySelectorAll('[data-lstyle]').forEach((b) =>
@@ -681,13 +687,7 @@ function syncTool() {
   // Size stays in place but dims when the tool has no size — the main bar never reflows.
   const showSize = ['pen', 'highlighter', 'laser', 'eraser', 'shape', 'text', 'math'].includes(state.tool);
   refs.sizeBox.classList.toggle('disabled', !showSize);
-  if (showSize) {
-    refs.sizeR.min = t.min ?? 1;
-    refs.sizeR.max = t.max ?? 40;
-    refs.sizeR.step = t.step ?? 1;
-    refs.sizeR.value = t.size;
-    refs.sizeVal.textContent = t.size;
-  }
+  if (showSize) refs.sizeVal.textContent = t.size;
   refs.penstyle.style.display = state.tool === 'pen' ? '' : 'none';
   refs.laseropts.style.display = state.tool === 'laser' ? '' : 'none';
   refs.shapes.style.display = state.tool === 'shape' ? '' : 'none';
