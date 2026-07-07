@@ -1388,3 +1388,23 @@
   /* pages drawer thumbs a bit smaller */
   .pd-thumb { height: 96px; }
 }
+
+/* ---- zoom HUD (bottom-left of the stage) ---- */
+.zoom-hud {
+  position: absolute; left: 14px; bottom: 14px; z-index: 5;
+  display: flex; align-items: center; gap: 2px;
+  background: var(--cream); border: 1.5px solid var(--ink); border-radius: 10px;
+  padding: 3px; box-shadow: 2px 3px 0 rgba(0,0,0,0.14);
+}
+.zh-btn, .zh-pct {
+  font-family: var(--font-ui); font-size: 15px; line-height: 1; color: var(--ink);
+  background: transparent; border: none; border-radius: 7px;
+  min-width: 30px; height: 30px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background var(--t-fast);
+}
+.zh-btn:hover, .zh-pct:hover { background: var(--cream-soft); }
+.zh-btn:active, .zh-pct:active { transform: translateY(1px); }
+.zh-pct { font-size: 11.5px; min-width: 44px; color: var(--ink-soft); }
+.zh-sep { width: 0; height: 18px; border-left: 1.5px dashed var(--ink); opacity: 0.3; margin: 0 2px; }
+.zh-focus svg { width: 16px; height: 16px; }

@@ -25,6 +25,7 @@ import { loadNotebookRecord } from './library/library.js';
 import { currentRoute, onRouteChange, goLibrary, goEditor, goQuizzes } from './router.js';
 import { applyTheme } from './ui/theme.js';
 import { initTabs, openTab, removeTab, getTabs } from './ui/tabs.js';
+import { initZoomHud, syncZoomHud } from './ui/zoomHud.js';
 
 const SHORTCUTS = {
   KeyP: 'pen', KeyM: 'highlighter', KeyE: 'eraser', KeyS: 'shape',
@@ -53,11 +54,15 @@ async function boot() {
   setTextHandler(openTextEditor);
   initMathEditor(document.getElementById('stage'));
   setMathHandler(openMathEditor);
-  setCameraChangeHandler(() => { syncTextEditor(); syncMathEditor(); });
+  setCameraChangeHandler(() => { syncTextEditor(); syncMathEditor(); syncZoomHud(); });
   setReadyCallback(() => render()); // async image decode -> repaint
   const stageEl = document.getElementById('stage');
   setCameraBounds(() => spreadPh(), () => stageEl.clientHeight);
   setWorldWidth(() => spreadWorldWidth());
+  initZoomHud(stageEl, () => {
+    render(); clearOverlay(); reflectSelection();
+    syncTextEditor(); syncMathEditor();
+  });
   initQuizPlay(document.getElementById('quizplay'));
   initQuizHome(quizHomeEl);
   initQuizEdit(quizEditEl, { onPlay: playQuiz, onHost: hostQuiz, onBack: goQuizzes });
@@ -79,7 +84,7 @@ async function boot() {
     const { vw, vh } = viewport();
     if (spreadPh()) fitPage(vw, vh); // fixed-height page (PDF/A4/…) -> fit whole page on screen
     resetTop(vw, vh);
-    render(); clearOverlay(); syncPages();
+    render(); clearOverlay(); syncPages(); syncZoomHud();
   };
   state.onPageQuiet = () => { render(); clearOverlay(); syncPages(); }; // spread-page switch
 
@@ -124,7 +129,7 @@ async function route() {
     resizeRenderer(); resizeOverlay();
     const { vw, vh } = viewport();
     fitPage(vw, vh); resetTop(vw, vh);
-    render(); clearOverlay(); syncAll();
+    render(); clearOverlay(); syncAll(); syncZoomHud();
   } else if (r.view === 'quizzes') {
     await flushSave();
     show('quizzes');
@@ -187,7 +192,7 @@ function bindKeys() {
     if (editorEl.style.display === 'none') return;
     resizeRenderer(); resizeOverlay();
     const { vw, vh } = viewport();
-    fitPage(vw, vh); render();
+    fitPage(vw, vh); render(); syncZoomHud();
   });
 }
 

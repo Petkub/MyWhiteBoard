@@ -147,6 +147,12 @@ ui/insert.js       insert image as a movable object (insertImageFile/
                    via modalChoose, hover-✕ = remove. Wired in .tb, reparented
                    LAST like the other popovers; outside-click close ignores
                    .modal-backdrop clicks.
+ui/zoomHud.js      floating zoom controls bottom-left of #stage: −/+ step zoom
+                   (×1.25 about viewport center), % label resets to 100%, ⛶
+                   focus re-runs fitPage+resetTop. syncZoomHud() refreshes the %
+                   label — called from the pointer camera-change handler and
+                   every fitPage call site (route, page change, resize, spread
+                   toggle, page-size pick).
 ui/modal.js        promise-based modals (modalPrompt/Confirm/Alert/Choose/NewNotebook)
                    — use these, NOT native prompt()/confirm()/alert().
                    modalNewNotebook returns { title, bg, ph } for createNotebook opts.

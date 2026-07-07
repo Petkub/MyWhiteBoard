@@ -11,6 +11,7 @@ import {
 import { togglePagesPanel, refreshPagesPanel } from './pagesPanel.js';
 import { goLibrary } from '../router.js';
 import { fitPage, resetTop } from '../viewport/camera.js';
+import { syncZoomHud } from './zoomHud.js';
 import { render, viewport } from '../render/renderer.js';
 import { clearOverlay } from '../render/overlay.js';
 import { flush as flushSave } from '../store/autosave.js';
@@ -580,7 +581,7 @@ export function buildToolbar(mount) {
       const { vw, vh } = viewport();
       fitPage(vw, vh); resetTop(vw, vh); // fixed size chosen -> fit page on screen
       state.onMutate();
-      syncPages();
+      syncPages(); syncZoomHud();
     }));
   root.querySelector('.tb-lock').addEventListener('click', toggleLockSelection);
   root.querySelector('.tb-undo').addEventListener('click', undoAction);
@@ -597,7 +598,7 @@ export function buildToolbar(mount) {
     spreadBtn.classList.toggle('active', state.spread);
     const { vw, vh } = viewport();
     fitPage(vw, vh); resetTop(vw, vh);
-    render(); clearOverlay(); syncPages();
+    render(); clearOverlay(); syncPages(); syncZoomHud();
   });
   root.querySelector('.tb-clear').addEventListener('click', async () => {
     closeMenu();
