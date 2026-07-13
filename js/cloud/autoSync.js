@@ -13,12 +13,13 @@ import { SUPABASE_URL } from '../quiz/live/config.js';
 import { supa, configured } from './supa.js';
 import { pushNotebook, pullNotebook, cloudUpdated, currentUser } from './sync.js';
 import { getNotebook, putNotebook } from '../store/db.js';
+import { flush as flushSave } from '../store/autosave.js';
 
 const PUSH_DELAY = 10000;
 const LS_KEY = 'wb-sync'; // { [nbId]: updated } — last value both sides agreed on
 
 let cb = { openNotebookId: () => null, applyPulled: () => {}, libraryChanged: () => {}, status: () => {} };
-let user = null, started = false, ch = null, chUid = null, pushTimer = 0;
+let user = null, startP = null, ch = null, chUid = null, pushTimer = 0;
 
 let lastSynced = {};
 try { lastSynced = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { /* fresh */ }
@@ -36,9 +37,15 @@ export function initAutoSync(callbacks) {
 export function notifyLogin() { start(); }
 export function notifyLogout() { user = null; closeChannel(); }
 
-async function start() {
-  if (started || !configured()) return;
-  started = true;
+// The SDK loads from a CDN and the session restores asynchronously — every
+// sync entry point awaits this instead of peeking at `user` directly, or the
+// first notebook open / first edits after boot race the session and no-op.
+function start() {
+  if (!startP && configured()) startP = doStart();
+  return startP;
+}
+
+async function doStart() {
   const sb = await supa();
   user = (await sb.auth.getSession()).data.session?.user || null;
   sb.auth.onAuthStateChange((_ev, session) => {
@@ -46,6 +53,12 @@ async function start() {
     user ? openChannelFor(user) : closeChannel();
   });
   if (user) openChannelFor(user);
+}
+
+async function ensureUser() {
+  if (!startP) return null; // never signed in on this device
+  await startP;
+  return user;
 }
 
 function openChannelFor(u) {
@@ -66,15 +79,17 @@ function closeChannel() {
 
 // ---- push (debounced after local edits) ----
 export function scheduleCloudPush() {
-  if (!user) return;
+  if (!startP) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(() => { firePush(); }, PUSH_DELAY);
 }
 
 async function firePush() {
   clearTimeout(pushTimer);
+  pushTimer = 0;
   const id = cb.openNotebookId();
-  if (!user || !id) return;
+  if (!id || !(await ensureUser())) return;
+  await flushSave(); // tab-hide can fire before the 1s autosave lands
   const nb = await getNotebook(id);
   if (!nb || (lastSynced[id] || 0) >= nb.updated) return; // nothing new
   cb.status('☁ syncing…');
@@ -97,7 +112,7 @@ document.addEventListener('visibilitychange', () => {
 // Returns the freshest record: the cloud copy replaces local when strictly
 // newer; a locally-newer copy stays (its own push follows).
 export async function maybePullNewer(nb) {
-  if (!user) return nb;
+  if (!(await ensureUser())) return nb;
   try {
     const remote = await cloudUpdated(nb.id);
     if (remote <= (nb.updated || 0)) return nb;
