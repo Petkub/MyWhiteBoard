@@ -47,11 +47,16 @@ async function renderPdf(file, onStatus) {
     const vp = page.getViewport({ scale: Math.min(4, (PAGE_W * 3) / base.width) });
     const cv = document.createElement('canvas');
     cv.width = vp.width; cv.height = vp.height;
-    await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    const cctx = cv.getContext('2d');
+    // JPEG has no alpha — pre-fill white or transparent PDF areas turn black
+    cctx.fillStyle = '#fff';
+    cctx.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: cctx, viewport: vp }).promise;
     const ph = Math.round((PAGE_W * vp.height) / vp.width);
     pages.push({
       bg: 'plain', strokes: [],
-      bgImage: cv.toDataURL('image/png'),
+      // JPEG ~5-10x smaller than PNG for typical slides/docs; quota-friendly
+      bgImage: cv.toDataURL('image/jpeg', 0.85),
       bgImageH: ph,
       ph, // page ends exactly where the PDF page ends
     });

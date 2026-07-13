@@ -124,7 +124,19 @@ import/pageImport.js PDF/image -> pages. renderFileToPages() returns page record
                    (library: new notebook); importFileAsPages() appends to current.
                    Pages get ph = bgImageH (fixed paper = sheet size). PDFs raster
                    at ~3x the 794 world width (cap 4x pdf scale) so zoom stays sharp
-                   — resolution is baked at import time.
+                   — resolution is baked at import time. PDF pages store as JPEG
+                   0.85 (white pre-fill — JPEG has no alpha), ~5-10x smaller than
+                   the old PNG; direct image imports keep the original file bytes.
+cloud/*.js         sync-lite: MANUAL push/pull of notebook records to a private
+                   Supabase Storage bucket 'notebooks' (same project/keys as live
+                   quiz, separate lazy client in supa.js that persists the auth
+                   session). sync.js: email+password auth + <uid>/<id>.json per
+                   notebook + <uid>/index.json (id -> title/updated/pages/bytes)
+                   so listing needs no downloads; last push wins, pull overwrites
+                   local (confirmed if a local copy exists). cloudUI.js: ☁ cloud
+                   panel (library header) = login / cloud list; push lives in the
+                   notebook card ⋯ menu. Bucket + RLS policies are created by
+                   hand in the Supabase dashboard (see cloud/sync.js header).
 ui/toolbar.js      editor toolbar. Main bar is layout-STABLE and center-clustered
                    (left: ☰ + undo/redo · center: tools tray + swatches + size
                    slider · right: pages + status, balanced by two .tb-spacer).

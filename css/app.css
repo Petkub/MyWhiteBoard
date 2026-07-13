@@ -1406,3 +1406,21 @@
 .zh-pct { font-size: 11.5px; min-width: 44px; color: var(--ink-soft); }
 .zh-sep { width: 0; height: 18px; border-left: 1.5px dashed var(--ink); opacity: 0.3; margin: 0 2px; }
 .zh-focus svg { width: 16px; height: 16px; }
+
+/* ---- cloud sync panel ---- */
+.cl-modal { width: min(460px, calc(100vw - 40px)); }
+.cl-err { color: var(--accent-red); font-size: 12px; min-height: 15px; margin-top: 6px; }
+.cl-account { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; font-size: 12.5px; color: var(--ink-soft); }
+.cl-linkbtn { background: none; border: none; color: var(--ink-mute); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+.cl-linkbtn:hover { color: var(--ink); }
+.cl-list {
+  display: flex; flex-direction: column; gap: 6px; max-height: 46vh; overflow-y: auto;
+  border: 1.5px dashed var(--line); border-radius: 10px; padding: 8px; margin-bottom: 8px;
+}
+.cl-row { display: flex; align-items: center; gap: 8px; }
+.cl-meta { flex: 1; min-width: 0; }
+.cl-title { font-family: 'Excalifont', 'Itim', var(--font-ui); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-sub { font-size: 11px; color: var(--ink-mute); }
+.cl-row .modal-btn { padding: 6px 10px; font-size: 12px; flex-shrink: 0; }
+.cl-del:hover { background: var(--accent-red); color: #fff; border-color: var(--accent-red); }
+.cl-empty { text-align: center; color: var(--ink-mute); font-size: 12.5px; padding: 12px 0; }

@@ -16,6 +16,8 @@ import { goEditor, goQuizzes, goJoin } from '../router.js';
 import { modalPrompt, modalConfirm, modalAlert, modalChoose, modalNewNotebook } from '../ui/modal.js';
 import { toggleTheme, themeLabel } from '../ui/theme.js';
 import { removeTab } from '../ui/tabs.js';
+import { openCloudPanel } from '../cloud/cloudUI.js';
+import { pushNotebook, currentUser } from '../cloud/sync.js';
 
 const icon = (paths, w = 2) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
@@ -59,6 +61,7 @@ export function initLibrary(rootEl) {
           </div>
         </span>
         <button class="lib-ghost lib-selmode" title="Select multiple notebooks">${ICON_SELECT}<span>select</span></button>
+        <button class="lib-ghost lib-cloud" title="Cloud sync">☁&nbsp;<span>cloud</span></button>
         <button class="lib-link lib-quizzes">Quizzes →</button>
         <button class="lib-link lib-joinlive">join live →</button>
         <button class="lib-ghost lib-iconbtn lib-theme"></button>
@@ -93,6 +96,7 @@ export function initLibrary(rootEl) {
   mount.querySelector('.lib-new').addEventListener('click', onNewNotebook);
   els.file.addEventListener('change', onImport);
   els.pdffile.addEventListener('change', onFromPdf);
+  mount.querySelector('.lib-cloud').addEventListener('click', () => openCloudPanel({ onChange: refreshLibrary }));
   mount.querySelector('.lib-quizzes').addEventListener('click', () => goQuizzes());
   mount.querySelector('.lib-joinlive').addEventListener('click', () => goJoin());
   const themeBtn = mount.querySelector('.lib-theme');
@@ -390,10 +394,25 @@ function buildPop(nb) {
     item('export PNG', async () => { const r = await loadNotebookRecord(nb.id); exportPagePNG(r.pages[0], r.title, 1); }),
     item('export PDF', async () => { const r = await loadNotebookRecord(nb.id); exportNotebookPDF(r.pages, r.title); }),
     item('export JSON', async () => { const r = await loadNotebookRecord(nb.id); exportNotebookJSON(r); }),
+    item('☁ push to cloud', () => pushToCloud(nb)),
     div(),
     item('delete', async () => { if (await modalConfirm({ title: 'Delete notebook', message: `Delete "${nb.title}"? This can't be undone.`, confirmText: 'Delete', danger: true })) { await removeNotebook(nb.id); removeTab(nb.id); refreshLibrary(); } }, 'danger'),
   );
   return pop;
+}
+
+// Card ⋯ menu -> upload the full record; opens the cloud panel first when
+// signed out so the user can log in, then retries nothing (they re-click).
+async function pushToCloud(nb) {
+  if (!(await currentUser().catch(() => null))) { openCloudPanel({ onChange: refreshLibrary }); return; }
+  const r = await loadNotebookRecord(nb.id);
+  if (!r) return;
+  try {
+    await pushNotebook(r);
+    modalAlert({ title: '☁ Pushed', message: `"${r.title}" is in the cloud — pull it from any device via ☁ cloud.` });
+  } catch (e) {
+    modalAlert({ title: 'Push failed', message: e.message || 'error' });
+  }
 }
 
 async function moveDialog(nb) {
