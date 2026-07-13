@@ -127,16 +127,26 @@ import/pageImport.js PDF/image -> pages. renderFileToPages() returns page record
                    — resolution is baked at import time. PDF pages store as JPEG
                    0.85 (white pre-fill — JPEG has no alpha), ~5-10x smaller than
                    the old PNG; direct image imports keep the original file bytes.
-cloud/*.js         sync-lite: MANUAL push/pull of notebook records to a private
-                   Supabase Storage bucket 'notebooks' (same project/keys as live
-                   quiz, separate lazy client in supa.js that persists the auth
-                   session). sync.js: email+password auth + <uid>/<id>.json per
-                   notebook + <uid>/index.json (id -> title/updated/pages/bytes)
-                   so listing needs no downloads; last push wins, pull overwrites
-                   local (confirmed if a local copy exists). cloudUI.js: ☁ cloud
-                   panel (library header) = login / cloud list; push lives in the
-                   notebook card ⋯ menu. Bucket + RLS policies are created by
-                   hand in the Supabase dashboard (see cloud/sync.js header).
+cloud/*.js         cloud sync on a private Supabase Storage bucket 'notebooks'
+                   (same project/keys as live quiz; supa.js = separate lazy
+                   client that persists the auth session). sync.js: email+
+                   password auth; SPLIT layout <uid>/<nbid>/meta.json (+ per-page
+                   pageRevs hashes) + <uid>/<nbid>/p<i>.json so pushes upload
+                   only changed pages; <uid>/index.json (id -> title/updated/
+                   pages/bytes) for listing; legacy <uid>/<id>.json still pulls,
+                   next push migrates it. autoSync.js: signed-in users get
+                   push (10s debounce after onMutate + on tab-hide), pull-on-open
+                   (route calls maybePullNewer), and a Realtime channel
+                   sync:<uid> so a second device live-refreshes (open+clean
+                   notebook silently reloads via applyPulled; else library
+                   refresh). Conflicts = last-write-wins; a dirty local notebook
+                   is never clobbered (its own push wins). localStorage 'wb-sync'
+                   holds last agreed `updated` per notebook; boot touches zero
+                   network unless the sb-<ref>-auth-token key exists.
+                   cloudUI.js: ☁ cloud panel (library header) = login / cloud
+                   list; manual push in notebook card ⋯ menu. Bucket + per-uid
+                   RLS policies created by hand in the Supabase dashboard (DONE
+                   on the user's project 2026-07-13; email confirmation OFF).
 ui/toolbar.js      editor toolbar. Main bar is layout-STABLE and center-clustered
                    (left: ☰ + undo/redo · center: tools tray + swatches + size
                    slider · right: pages + status, balanced by two .tb-spacer).

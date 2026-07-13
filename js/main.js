@@ -28,6 +28,7 @@ import { currentRoute, onRouteChange, goLibrary, goEditor, goQuizzes } from './r
 import { applyTheme } from './ui/theme.js';
 import { initTabs, openTab, removeTab, getTabs } from './ui/tabs.js';
 import { initZoomHud, syncZoomHud } from './ui/zoomHud.js';
+import { initAutoSync, scheduleCloudPush, maybePullNewer } from './cloud/autoSync.js';
 
 const SHORTCUTS = {
   KeyP: 'pen', KeyM: 'highlighter', KeyE: 'eraser', KeyS: 'shape',
@@ -83,7 +84,7 @@ async function boot() {
     if (!(await loadNotebookRecord(t.id))) removeTab(t.id);
   }
 
-  state.onMutate = () => { render(); reflectSelection(); scheduleSave(); };
+  state.onMutate = () => { render(); reflectSelection(); scheduleSave(); scheduleCloudPush(); };
   state.onPageChange = () => {
     const { vw, vh } = viewport();
     if (spreadPh()) fitPage(vw, vh); // fixed-height page (PDF/A4/…) -> fit whole page on screen
@@ -92,6 +93,19 @@ async function boot() {
   };
   state.onPageQuiet = () => { render(); clearOverlay(); syncPages(); }; // spread-page switch
 
+
+  initAutoSync({
+    openNotebookId: () => state.notebookId,
+    // another device pushed the notebook we have open (and it's clean here)
+    applyPulled: (nb) => {
+      if (state.notebookId !== nb.id) return;
+      loadInto(nb);
+      openTab(nb.id, nb.title || 'Untitled');
+      render(); clearOverlay(); syncAll();
+    },
+    libraryChanged: () => { if (libraryEl.style.display !== 'none') refreshLibrary(); },
+    status: (t) => { const el = statusEl(); if (el) el.textContent = t; },
+  });
 
   bindKeys();
   window.addEventListener('beforeunload', () => { flushSave(); flushQuiz(); });
@@ -125,8 +139,9 @@ async function route() {
   const r = currentRoute();
   if (r.view !== 'join') closePlayer(); // back-button out of #join closes the overlay
   if (r.view === 'editor' && r.id) {
-    const nb = await loadNotebookRecord(r.id);
+    let nb = await loadNotebookRecord(r.id);
     if (!nb) { goLibrary(); return; }
+    nb = await maybePullNewer(nb); // signed in + cloud newer -> fetch it
     loadInto(nb);
     openTab(nb.id, nb.title || 'Untitled');
     show('editor');

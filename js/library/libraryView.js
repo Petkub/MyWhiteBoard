@@ -18,6 +18,7 @@ import { toggleTheme, themeLabel } from '../ui/theme.js';
 import { removeTab } from '../ui/tabs.js';
 import { openCloudPanel } from '../cloud/cloudUI.js';
 import { pushNotebook, currentUser } from '../cloud/sync.js';
+import { markSynced } from '../cloud/autoSync.js';
 
 const icon = (paths, w = 2) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
@@ -409,6 +410,7 @@ async function pushToCloud(nb) {
   if (!r) return;
   try {
     await pushNotebook(r);
+    markSynced(r.id, r.updated);
     modalAlert({ title: '☁ Pushed', message: `"${r.title}" is in the cloud — pull it from any device via ☁ cloud.` });
   } catch (e) {
     modalAlert({ title: 'Push failed', message: e.message || 'error' });

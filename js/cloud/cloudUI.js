@@ -10,6 +10,7 @@ import {
 } from './sync.js';
 import { getNotebook, putNotebook } from '../store/db.js';
 import { modalConfirm, modalAlert } from '../ui/modal.js';
+import { notifyLogin, notifyLogout, markSynced } from './autoSync.js';
 
 let backdrop = null;
 let onChanged = () => {};
@@ -61,7 +62,7 @@ function renderLogin(err = '') {
   $('.cl-signin').addEventListener('click', async () => {
     const c = creds();
     if (!c.email || !c.password) return renderLogin('email + password required');
-    try { await signIn(c.email, c.password); renderList(await currentUser()); }
+    try { await signIn(c.email, c.password); notifyLogin(); renderList(await currentUser()); }
     catch (e) { renderLogin(e.message || 'sign in failed'); }
   });
   $('.cl-signup').addEventListener('click', async () => {
@@ -69,7 +70,7 @@ function renderLogin(err = '') {
     if (!c.email || c.password.length < 6) return renderLogin('password: 6+ characters');
     try {
       const instant = await signUp(c.email, c.password);
-      if (instant) renderList(await currentUser());
+      if (instant) { notifyLogin(); renderList(await currentUser()); }
       else renderLogin('check your email to confirm the account, then sign in');
     } catch (e) { renderLogin(e.message || 'sign up failed'); }
   });
@@ -94,7 +95,7 @@ async function renderList(user) {
   const $ = (s) => backdrop.querySelector(s);
   $('.cl-done').addEventListener('click', close);
   $('.cl-refresh').addEventListener('click', () => renderList(user));
-  $('.cl-signout').addEventListener('click', async () => { await signOut(); renderLogin(); });
+  $('.cl-signout').addEventListener('click', async () => { await signOut(); notifyLogout(); renderLogin(); });
 
   const list = $('.cl-list');
   let items;
@@ -126,6 +127,7 @@ async function renderList(user) {
       try {
         const nb = await pullNotebook(it.id);
         await putNotebook(nb); // keep the cloud record's own `updated`
+        markSynced(nb.id, nb.updated);
         onChanged();
         row.querySelector('.cl-pull').textContent = '✓ pulled';
       } catch (e) { modalAlert({ title: 'Pull failed', message: e.message || 'error' }); }
