@@ -42,7 +42,7 @@ export function renderPageToCanvas(page, scale = 2, maxH = Infinity) {
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   ctx.imageSmoothingQuality = 'high';
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = page.paperColor || '#ffffff';
   ctx.fillRect(0, 0, PAGE_W, h);
   if (page.bgImage) {
     const img = getImage(page.bgImage);

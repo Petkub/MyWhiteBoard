@@ -13,6 +13,9 @@ export const COLORS = ['#111111', '#d62828', '#1d3fb6', '#2f9e44', '#7048e8', '#
 
 export const BACKGROUNDS = ['plain', 'grid', 'dotted', 'lined'];
 
+// Page paper fill colors (first = default white). null paperColor also = white.
+export const PAPER_COLORS = ['#ffffff', '#fdf6e3', '#fff9c4', '#e8f5e9', '#e3f2fd', '#fce4ec', '#eceff1', '#2b2f36'];
+
 // Per-tool defaults — each tool keeps own settings.
 // stabilize 0..0.95 (higher = smoother lag); sharpness 0..1 (0 soft curves, 1 polyline)
 export const TOOL_DEFAULTS = {

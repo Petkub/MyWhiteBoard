@@ -90,6 +90,15 @@
   background-image: linear-gradient(#cdd7e5 1px, transparent 1px);
   background-size: 100% 8px;
 }
+.tb-paperpick { display: flex; gap: 6px; flex-wrap: wrap; }
+.tb-papertile {
+  width: 24px; height: 24px; border: 1.5px solid var(--ink); border-radius: 50%;
+  cursor: pointer; padding: 0;
+  transition: transform var(--t-fast) var(--ease);
+}
+.tb-papertile:hover { transform: translateY(-1px); }
+.tb-papertile.active { outline: 2px solid var(--ink); outline-offset: 2px; }
+
 .tb-sizepick { display: flex; gap: 5px; flex: 1; }
 .tb-sizepick .tb-chip { font-size: 11px; padding: 6px 6px; }
 

@@ -2,9 +2,9 @@
 // (title, background, insert, export, library) live in a ☰ dropdown so the bar
 // never overflows. Pure DOM; styled by css/app.css (mySlideMaker identity).
 
-import { COLORS, SHAPES, BACKGROUNDS, EMOJIS } from '../config.js';
+import { COLORS, SHAPES, BACKGROUNDS, PAPER_COLORS, EMOJIS } from '../config.js';
 import {
-  state, curTool, setTool, setColor, setSize, setBackground, setPageHeight,
+  state, curTool, setTool, setColor, setSize, setBackground, setPaperColor, setPageHeight,
   undoAction, redoAction, flipPage, addPage, removePage, clearPage, curPage, toRecord,
   toggleLockSelection, saveToolPrefs, toggleSpread, toggleBookmark,
 } from '../state.js';
@@ -386,6 +386,8 @@ export function buildToolbar(mount) {
         <input type="text" class="tb-title" placeholder="Untitled"></div>
       <div class="tb-mrow"><span class="tb-mlabel">paper</span>
         <div class="tb-bgpick">${BACKGROUNDS.map((b) => `<button class="tb-bgtile" data-bg="${b}" title="${b}"></button>`).join('')}</div></div>
+      <div class="tb-mrow"><span class="tb-mlabel">color</span>
+        <div class="tb-paperpick">${PAPER_COLORS.map((c) => `<button class="tb-papertile" data-color="${c}" title="${c}" style="background:${c}"></button>`).join('')}</div></div>
       <div class="tb-mrow"><span class="tb-mlabel">size</span>
         <div class="tb-sizepick">
           <button class="tb-chip" data-ph="0" title="Endless vertical page">∞ scroll</button>
@@ -477,6 +479,7 @@ export function buildToolbar(mount) {
     arrowSizeBox: root.querySelector('.tb-arrowsize'),
     arrowSizeV: root.querySelector('.tb-arrowsize-v'),
     bgPick: root.querySelector('.tb-bgpick'),
+    paperPick: root.querySelector('.tb-paperpick'),
     sizePick: root.querySelector('.tb-sizepick'),
     counter: root.querySelector('.tb-page-counter'),
     bookmark: root.querySelector('.tb-bookmark'),
@@ -581,6 +584,8 @@ export function buildToolbar(mount) {
     }));
   refs.bgPick.querySelectorAll('.tb-bgtile').forEach((b) =>
     b.addEventListener('click', () => { setBackground(b.dataset.bg); syncPages(); }));
+  refs.paperPick.querySelectorAll('.tb-papertile').forEach((b) =>
+    b.addEventListener('click', () => { setPaperColor(b.dataset.color); syncPages(); }));
   refs.sizePick.querySelectorAll('[data-ph]').forEach((b) =>
     b.addEventListener('click', () => {
       setPageHeight(Number(b.dataset.ph));
@@ -765,6 +770,9 @@ export function syncPages() {
   refreshPagesPanel();
   refs.bgPick.querySelectorAll('.tb-bgtile').forEach((b) =>
     b.classList.toggle('active', b.dataset.bg === curPage().bg));
+  const pc = (curPage().paperColor || '#ffffff').toLowerCase();
+  refs.paperPick.querySelectorAll('.tb-papertile').forEach((b) =>
+    b.classList.toggle('active', b.dataset.color.toLowerCase() === pc));
   const ph = curPage().ph || 0;
   refs.sizePick.querySelectorAll('[data-ph]').forEach((b) =>
     b.classList.toggle('active', Number(b.dataset.ph) === ph));

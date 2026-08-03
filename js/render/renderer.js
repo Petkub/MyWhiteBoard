@@ -73,7 +73,7 @@ function drawPaper(page, view, active) {
   const ph = page.ph || null;
   const yTop = ph ? 0 : Math.max(view.y1, -40);
   const yBot = ph ? ph : view.y2 + 40;
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = page.paperColor || '#ffffff';
   ctx.fillRect(0, yTop, PAGE_W, yBot - yTop);
 
   // page edge: crisp ink outline for fixed pages, subtle shadow for infinite;

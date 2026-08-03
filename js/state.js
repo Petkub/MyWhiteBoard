@@ -306,6 +306,11 @@ export function setBackground(bg) {
   state.onMutate();
 }
 
+export function setPaperColor(c) {
+  curPage().paperColor = c || null; // null = default white
+  state.onMutate();
+}
+
 // Fixed page height in world px (e.g. 1123 = A4 portrait), or null = infinite.
 export function setPageHeight(ph) {
   curPage().ph = ph || null;
@@ -320,7 +325,7 @@ export function goToPage(i) {
 }
 
 export function addPage(after = state.current) {
-  state.pages.splice(after + 1, 0, { bg: curPage().bg, ph: curPage().ph || null, strokes: [] });
+  state.pages.splice(after + 1, 0, { bg: curPage().bg, ph: curPage().ph || null, paperColor: curPage().paperColor || null, strokes: [] });
   goToPage(after + 1);
 }
 

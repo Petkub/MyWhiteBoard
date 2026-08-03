@@ -37,8 +37,12 @@ Open notebooks appear as **tabs** (`ui/tabs.js`, `#tabbar` above the toolbar) â€
 
 ```
 notebook = { id, title, folderId, tags[], created, updated, current, pages[] }
-page     = { bg, strokes[], ph?, bgImage?, bgImageH?, bookmark? }
+page     = { bg, strokes[], ph?, bgImage?, bgImageH?, bookmark?, paperColor? }
            // bg: plain|grid|dotted|lined; bgImage = imported PDF/image
+           // paperColor: page fill (config.PAPER_COLORS; null/absent = #fff).
+           //     Applied in renderer.js + exporter.js paper rect; picked in the
+           //     â˜° menu "color" row (.tb-paperpick). Pattern lines stay fixed
+           //     light hues (may clash on the dark paper swatch).
            // ph: fixed page height in world px (1123=A4, 794=1:1, 447=16:9) or
            //     null = infinite vertical scroll. PDF/image imports set ph =
            //     bgImageH so the paper ends exactly where the sheet ends.
