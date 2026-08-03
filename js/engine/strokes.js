@@ -69,12 +69,17 @@ function smoothArray(arr, window) {
   return out;
 }
 
-// Light Laplacian smoothing of point positions (endpoints fixed). Kills the
-// jitter that makes the ribbon look faceted.
+// Corner-preserving Laplacian smoothing of point positions (endpoints fixed).
+// Kills jitter on straights/curves so the ribbon reads smooth, but skips high-
+// angle vertices so intentional sharp corners stay crisp instead of rounding off.
 function smoothPositions(pts, passes) {
   for (let k = 0; k < passes; k++) {
     const c = pts.map((p) => ({ x: p.x, y: p.y }));
     for (let i = 1; i < pts.length - 1; i++) {
+      const ax = c[i].x - c[i - 1].x, ay = c[i].y - c[i - 1].y;
+      const bx = c[i + 1].x - c[i].x, by = c[i + 1].y - c[i].y;
+      const cos = (ax * bx + ay * by) / ((Math.hypot(ax, ay) || 1) * (Math.hypot(bx, by) || 1));
+      if (cos < 0.3) continue; // sharp turn (>~72°): leave the corner sharp
       pts[i].x = (c[i - 1].x + c[i].x * 2 + c[i + 1].x) / 4;
       pts[i].y = (c[i - 1].y + c[i].y * 2 + c[i + 1].y) / 4;
     }
@@ -93,7 +98,7 @@ export function fountainStroke(s) {
 
   const center = resampleCenterline(raw, s.sharpness ?? 0.3, 1.6);
   if (center.length < 2) return { center: [center[0]], widths: [base] };
-  smoothPositions(center, 3);
+  smoothPositions(center, 4);
 
   const n = center.length;
   // Broad-nib model: width depends on stroke direction vs a fixed nib edge.
@@ -101,7 +106,7 @@ export function fountainStroke(s) {
   // and smooth (no velocity noise) -> real italic/fountain thick-thin contrast.
   const NIB = -Math.PI / 4;                 // nib edge orientation (~45°, italic)
   const sinN = Math.sin(NIB), cosN = Math.cos(NIB);
-  const thinW = base * 0.28, thickW = base * 1.6;
+  const thinW = base * 0.20, thickW = base * 1.9;
   const taper = clamp(s.taper ?? 0.7, 0, 1);
   const K = 3;                               // tangent window (smooths direction)
   const widths = new Array(n);
@@ -110,7 +115,8 @@ export function fountainStroke(s) {
     const tx = b.x - a.x, ty = b.y - a.y;
     const len = Math.hypot(tx, ty) || 1;
     const ux = tx / len, uy = ty / len;
-    const contrast = Math.abs(ux * sinN - uy * cosN); // |sin(angle - nib)|: 0 thin, 1 thick
+    let contrast = Math.abs(ux * sinN - uy * cosN); // |sin(angle - nib)|: 0 thin, 1 thick
+    contrast = contrast * contrast * (3 - 2 * contrast); // smoothstep: crisper thick/thin edge
     let w = thinW + (thickW - thinW) * contrast;
     const pr = center[i].p || 0;
     if (pr > 0) w = thinW + (thickW - thinW) * pr;     // pressure overrides if a real pen
@@ -121,8 +127,9 @@ export function fountainStroke(s) {
     }
     widths[i] = Math.max(0.2, w);
   }
-  // gentle width smoothing to erase residual facets (keeps overall contrast)
-  const smoothed = smoothArray(widths, 5);
+  // gentle width smoothing to erase residual facets (narrow window keeps the
+  // thick/thin contrast crisp instead of blurring it)
+  const smoothed = smoothArray(widths, 3);
   return { center, widths: smoothed };
 }
 

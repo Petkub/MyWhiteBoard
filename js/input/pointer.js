@@ -96,7 +96,9 @@ export function initInput(overlayCanvas) {
 // Position + size the ring to the current tool's diameter (world size * zoom).
 function updateCursor(s, pointerType) {
   if (pointerType === 'touch' || !RING_TOOLS.has(state.tool)) { hideCursor(); return; }
-  const d = Math.max(4, curTool().size * camera.scale);
+  // floor keeps the ring visible for thin pens (the center dot still marks the
+  // exact point, so an over-size ring on a hair-thin nib is fine)
+  const d = Math.max(16, curTool().size * camera.scale);
   cursorEl.style.width = cursorEl.style.height = d + 'px';
   // independent `translate` property, NOT transform: the .down squeeze uses the
   // independent `scale` property, which would multiply a transform-translate
@@ -115,7 +117,9 @@ function updateCursor(s, pointerType) {
 
 function hideCursor() {
   if (cursorEl) cursorEl.hidden = true;
-  if (el) el.style.cursor = 'crosshair';
+  // keep the native cursor suppressed for ring tools so lifting a pen (which
+  // fires pointerleave) doesn't flash the OS arrow/crosshair on the page
+  if (el) el.style.cursor = RING_TOOLS.has(state.tool) ? 'none' : 'crosshair';
 }
 
 // Re-evaluate ring when tool/size changes without pointer movement.
@@ -462,7 +466,7 @@ function releaseInk(e) {
   // committing; over empty paper it just inks (no accidental no-ops)
   if (state.tool === 'pen' && curTool().scratch !== false && !ink.straight && isScribble(ink.stroke.points)) {
     const snap = clone(curStrokes());
-    const r = Math.max(4, ink.stroke.size);
+    const r = Math.max(2, ink.stroke.size * 0.5);
     let changed = false;
     for (const p of ink.stroke.points) if (eraseAt(curStrokes(), p, r)) changed = true;
     if (changed) {
