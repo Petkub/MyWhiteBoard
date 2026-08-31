@@ -91,3 +91,40 @@ export function layoutText(text, size, w) {
 export function textHeight(text, size, w) {
   return layoutText(text, size, w).height;
 }
+
+// Natural (unwrapped) width of a text block — the width it would need to
+// never word-wrap, only breaking on explicit '\n'. Drives auto-width text
+// boxes that grow with content instead of wrapping to a fixed box width.
+export function autoTextWidth(text, size) {
+  const { lines } = layoutText(text, size, Infinity);
+  let max = 0;
+  for (const L of lines) for (const it of L.items) max = Math.max(max, it.x + it.w);
+  return max;
+}
+
+// Tight hit-test against a text stroke's actual rendered glyphs, per line —
+// NOT its full box (`s.w` can run well past the last glyph, e.g. a
+// fixed-width box with a short line, or the default width before this
+// existed). Shared by "does this tap edit existing text?" and the text-tool
+// hover affordance, so both agree on what counts as "on the text."
+export function hitTextLine(s, world) {
+  const ly = world.y - s.y;
+  if (ly < 0) return false;
+  const { lines } = layoutText(s.text, s.size, s.w);
+  for (const L of lines) {
+    if (ly < L.y || ly > L.y + L.h) continue;
+    const lineW = L.items.reduce((m, it) => Math.max(m, it.x + it.w), 0);
+    const pad = s.size * 0.5; // small margin past the last glyph
+    return lineW > 0 && world.x >= s.x && world.x <= s.x + lineW + pad;
+  }
+  return false;
+}
+
+// Tight content bbox (world units, box-local) for the hover outline — the
+// actual glyph extent across all lines, not the full `s.w` wrap box.
+export function textContentBBox(text, size, w) {
+  const { lines, height } = layoutText(text, size, w);
+  let maxW = 0;
+  for (const L of lines) for (const it of L.items) maxW = Math.max(maxW, it.x + it.w);
+  return { w: maxW, h: height };
+}

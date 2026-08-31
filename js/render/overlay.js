@@ -132,6 +132,24 @@ function ring(x, y, w, h, color) {
   ctx.setLineDash([]);
 }
 
+// Text-tool hover affordance: a light dashed outline over the actual glyph
+// extent of the text box under the pointer (not its full wrap box), so it's
+// obvious what a tap will edit vs. start fresh. `bbox` is box-local (x1,y1
+// already the stroke's world x,y) — no selection ring, no handles.
+export function drawTextHover(bbox) {
+  clearOverlay();
+  if (!bbox) return;
+  world();
+  const k = camera.scale;
+  const pad = 3 / k;
+  rr(bbox.x1 - pad, bbox.y1 - pad, bbox.x2 - bbox.x1 + pad * 2, bbox.y2 - bbox.y1 + pad * 2, 5 / k);
+  ctx.setLineDash([5 / k, 4 / k]);
+  ctx.strokeStyle = 'rgba(29,63,182,0.55)';
+  ctx.lineWidth = 1.25 / k;
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
 export function drawSelection(strokes, selected) {
   clearOverlay();
   if (!selected || !selected.size) return;

@@ -12,7 +12,7 @@ import { initQuizHome, renderQuizHome } from './quiz/quizHome.js';
 import { initQuizEdit, openQuizEditorView, flush as flushQuiz } from './quiz/quizEditorView.js';
 import { initRenderer, render, viewport, resize as resizeRenderer } from './render/renderer.js';
 import { initOverlay, drawSelection, clearOverlay, resize as resizeOverlay } from './render/overlay.js';
-import { initInput, setTextHandler, setMathHandler, setCameraChangeHandler } from './input/pointer.js';
+import { initInput, setTextHandler, setMathHandler, setCameraChangeHandler, resetTextHover } from './input/pointer.js';
 import { initTextEditor, openTextEditor, isEditing, syncTextEditor } from './ui/textEditor.js';
 import { initMathEditor, openMathEditor, isMathEditing, syncMathEditor } from './ui/mathEditor.js';
 import { setReadyCallback } from './render/imageCache.js';
@@ -92,6 +92,7 @@ async function boot() {
     render(); clearOverlay(); syncPages(); syncZoomHud();
   };
   state.onPageQuiet = () => { render(); clearOverlay(); syncPages(); }; // spread-page switch
+  state.onToolChange = () => resetTextHover(); // drop the text-tool hover ring when it's no longer relevant
 
 
   initAutoSync({

@@ -57,6 +57,7 @@ export const state = {
   onMutate: () => {},   // -> render + schedule autosave
   onPageChange: () => {},
   onPageQuiet: () => {}, // page switch within a spread (no camera reset)
+  onToolChange: () => {}, // -> clear any tool-specific overlay (e.g. text hover ring)
 };
 
 // ---------------------------------------------------------------- spread view
@@ -282,6 +283,7 @@ export function setTool(t) {
   if (t === state.tool) return;
   state.tool = t;
   state.selected.clear();
+  state.onToolChange();
 }
 
 export function setColor(c) {

@@ -13,9 +13,10 @@ import {
 import { nodeAtRim, nodeCenter, nodeRadius } from '../engine/shapes.js';
 import { strokeBBox } from '../engine/strokes.js';
 import { eraseAt, strokeIndexAt, isScribble } from '../engine/eraser.js';
+import { hitTextLine, textContentBBox } from '../engine/text.js';
 import { render } from '../render/renderer.js';
 import {
-  drawLive, clearOverlay, drawSelection, drawRubber, drawLassoPath,
+  drawLive, clearOverlay, drawSelection, drawRubber, drawLassoPath, drawTextHover,
   drawLaserTrails, LASER_LIFE_MS, LASER_HOLD_FADE_MS, HANDLES, handlePoint, isResizable,
 } from '../render/overlay.js';
 
@@ -44,6 +45,7 @@ const resize = { active: false, handle: null, stroke: null, startStroke: null, s
 const lasso = { pts: null };
 const erase = { active: false, undoSnap: null, changed: false };
 const gesture = { pointers: new Map(), mode: null, lastMid: null, lastDist: 0, startX: 0, startY: 0 };
+let hoverIdx = -1; // text tool: index of the text stroke currently under the pointer, or -1
 
 // Laser pointer — ephemeral trails animated by a rAF loop until they fade.
 const laser = { trails: [], cur: null, raf: 0 };
@@ -84,6 +86,7 @@ export function initInput(overlayCanvas) {
   el.addEventListener('pointermove', (e) => updateCursor(localXY(e), e.pointerType));
   el.addEventListener('pointerdown', (e) => updateCursor(localXY(e), e.pointerType));
   el.addEventListener('pointerleave', hideCursor);
+  el.addEventListener('pointerleave', resetTextHover);
   // squeeze the ring slightly while the pen is down
   el.addEventListener('pointerdown', () => cursorEl.classList.add('down'));
   el.addEventListener('pointerup', () => cursorEl.classList.remove('down'));
@@ -299,6 +302,32 @@ function startInk(e, s) {
   drawLive(ink.stroke);
 }
 
+// Text tool, idle (not editing/dragging): outline whatever text stroke sits
+// under the pointer so it's clear a tap will edit it vs. start a fresh box.
+// Same tight per-line hit-test openTextEditor uses, so the two always agree.
+function updateTextHover(w) {
+  const strokes = curStrokes();
+  let idx = -1;
+  for (let i = strokes.length - 1; i >= 0; i--) {
+    const st = strokes[i];
+    if (st.tool === 'text' && hitTextLine(st, w)) { idx = i; break; }
+  }
+  if (idx === hoverIdx) return; // unchanged — skip the redundant repaint
+  hoverIdx = idx;
+  if (idx < 0) { clearOverlay(); return; }
+  const st = strokes[idx];
+  const { w: cw, h: ch } = textContentBBox(st.text, st.size, st.w);
+  drawTextHover({ x1: st.x, y1: st.y, x2: st.x + cw, y2: st.y + ch });
+}
+
+// Wired to state.onToolChange (leaving the text tool) and pointerleave, so a
+// stale hover ring never outlives its tool or the pointer leaving the canvas.
+export function resetTextHover() {
+  if (hoverIdx < 0) return;
+  hoverIdx = -1;
+  clearOverlay();
+}
+
 // ----------------------------------------------------------------- pointer move
 function onMove(e) {
   const s = localXY(e);
@@ -307,6 +336,7 @@ function onMove(e) {
     moveGesture();
     return;
   }
+  if (state.tool === 'text' && !ink.active) { updateTextHover(clampToPage(toWorld(s))); return; }
   if (!ink.active) return;
   const w = clampToPage(toWorld(s));
 
@@ -560,8 +590,8 @@ function applyResize(p) {
     s.x = h.includes('w') ? sb.x2 - size : sb.x1;
     s.y = h.includes('n') ? sb.y2 - size : sb.y1;
   } else { // text: side handles = width, vertical/corner = scale font
-    if (h === 'e') { s.x = sb.x1; s.w = nw; }
-    else if (h === 'w') { s.x = x1; s.w = nw; }
+    if (h === 'e') { s.x = sb.x1; s.w = nw; s.autoW = false; } // side-drag = an intentional fixed wrap width
+    else if (h === 'w') { s.x = x1; s.w = nw; s.autoW = false; }
     else {
       const f = clamp(nh / (sb.y2 - sb.y1), 0.15, 15);
       s.size = Math.max(6, ss.size * f);
