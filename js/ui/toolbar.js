@@ -348,6 +348,10 @@ export function buildToolbar(mount) {
         <button data-style="ballpoint" class="tb-chip">ballpoint</button>
         <button class="tb-chip tb-scratch" title="Scribble over ink to erase it">scratch</button>
       </div>
+      <span class="tb-step tb-smooth" title="Ink stabilizer — higher = steadier slow strokes, lower = more direct">smooth
+        <input type="range" class="tb-smooth-range" min="0" max="95" step="5">
+        <span class="tb-smooth-val">65%</span>
+      </span>
       <div class="tb-group tb-laseropts">
         <button data-lstyle="hold" class="tb-chip" title="Stroke stays while drawing, fades on release">hold</button>
         <button data-lstyle="trail" class="tb-chip" title="Comet trail that fades behind the tip">trail</button>
@@ -464,6 +468,9 @@ export function buildToolbar(mount) {
     sizeVal: root.querySelector('.tb-size-val'),
     penstyle: root.querySelector('.tb-penstyle'),
     scratch: root.querySelector('.tb-scratch'),
+    smoothBox: root.querySelector('.tb-smooth'),
+    smoothRange: root.querySelector('.tb-smooth-range'),
+    smoothVal: root.querySelector('.tb-smooth-val'),
     laseropts: root.querySelector('.tb-laseropts'),
     shapes: root.querySelector('.tb-shapes'),
     selectopts: root.querySelector('.tb-selectopts'),
@@ -562,6 +569,11 @@ export function buildToolbar(mount) {
     state.tools.pen.scratch = state.tools.pen.scratch === false;
     saveToolPrefs();
     syncPenStyle();
+  });
+  refs.smoothRange.addEventListener('input', () => {
+    curTool().stabilize = Number(refs.smoothRange.value) / 100;
+    refs.smoothVal.textContent = `${refs.smoothRange.value}%`;
+    saveToolPrefs();
   });
 
   refs.fill.addEventListener('click', () => { const t = curTool(); t.filled = !t.filled; saveToolPrefs(); syncShapeOpts(); });
@@ -698,8 +710,15 @@ function syncTool() {
   refs.shapes.style.display = state.tool === 'shape' ? '' : 'none';
   refs.emojiopts.style.display = state.tool === 'emoji' ? '' : 'none';
   refs.selectopts.style.display = (state.tool === 'select' || state.tool === 'lasso') ? '' : 'none';
+  const showSmooth = state.tool === 'pen' || state.tool === 'highlighter';
+  refs.smoothBox.style.display = showSmooth ? '' : 'none';
+  if (showSmooth) {
+    const v = Math.round((t.stabilize || 0) * 100);
+    refs.smoothRange.value = v;
+    refs.smoothVal.textContent = `${v}%`;
+  }
   // Contextual sub-bar only exists for tools that have extra options.
-  refs.sub.hidden = !['pen', 'laser', 'shape', 'select', 'lasso', 'emoji'].includes(state.tool);
+  refs.sub.hidden = !['pen', 'highlighter', 'laser', 'shape', 'select', 'lasso', 'emoji'].includes(state.tool);
   refs.subLabel.textContent = state.tool;
   syncPenStyle(); syncLaserOpts(); syncShapes(); syncShapeOpts(); syncEmoji(); syncColors();
   refreshCursor();

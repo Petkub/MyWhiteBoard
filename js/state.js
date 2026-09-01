@@ -6,11 +6,11 @@ import { TOOL_DEFAULTS, clamp, PAGE_W } from './config.js';
 export const clone = (o) => JSON.parse(JSON.stringify(o));
 
 // Per-tool user preferences persisted to localStorage. Only these fields are
-// saved/restored — min/max/step/stabilize etc. always come from TOOL_DEFAULTS
+// saved/restored — min/max/step etc. always come from TOOL_DEFAULTS
 // so tuning defaults later isn't masked by stale saved values.
 const PREF_KEY = 'wb-tools';
 const PREF_FIELDS = ['color', 'size', 'style', 'taper', 'kind', 'filled',
-  'cols', 'rows', 'arrowStart', 'arrowEnd', 'arrowSize', 'char', 'scratch'];
+  'cols', 'rows', 'arrowStart', 'arrowEnd', 'arrowSize', 'char', 'scratch', 'stabilize'];
 
 function loadToolPrefs(tools) {
   try {

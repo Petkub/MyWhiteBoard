@@ -4,7 +4,7 @@
 import { camera, worldToScreen } from '../viewport/camera.js';
 import { curPageOffsetX } from '../state.js';
 import { strokeBBox } from '../engine/strokes.js';
-import { drawStroke } from './paint.js';
+import { drawStroke, setPaintScale } from './paint.js';
 
 let canvas, ctx, dpr = 1;
 
@@ -37,6 +37,7 @@ export function drawLive(stroke) {
   clearOverlay();
   if (!stroke) return;
   world();
+  setPaintScale(camera.scale * dpr); // live ink samples at on-screen resolution
   drawStroke(ctx, stroke);
 }
 

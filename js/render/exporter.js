@@ -4,7 +4,7 @@
 import { PAGE_W, clamp } from '../config.js';
 import { strokeBBox } from '../engine/strokes.js';
 import { nodeMapOf } from '../engine/shapes.js';
-import { drawStroke } from './paint.js';
+import { drawStroke, setPaintScale } from './paint.js';
 import { get as getImage, decode } from './imageCache.js';
 
 const PAD = 40;
@@ -51,6 +51,7 @@ export function renderPageToCanvas(page, scale = 2, maxH = Infinity) {
     drawBackground(ctx, page.bg, h);
   }
 
+  setPaintScale(scale); // stroke sampling matches the export raster resolution
   const nodeMap = nodeMapOf(page.strokes);
   for (const s of page.strokes) if (s.tool === 'shape' && s.kind === 'edge') drawStroke(ctx, s, nodeMap);
   for (const s of page.strokes) if (!(s.tool === 'shape' && s.kind === 'edge')) drawStroke(ctx, s, nodeMap);

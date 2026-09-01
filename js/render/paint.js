@@ -9,14 +9,20 @@ import { layoutText, fontString, LINE_RATIO } from '../engine/text.js';
 import { mathSrc } from './mathInline.js';
 import { get as getImage } from './imageCache.js';
 
+// device px per world px of the surface being painted (canvas scale * dpr, or
+// export raster scale). Callers set it before a paint pass so stroke geometry
+// is sampled finely enough to stay round at high zoom.
+let paintScale = 1;
+export function setPaintScale(k) { paintScale = Math.max(0.1, k || 1); }
+
 export function drawStroke(ctx, s, nodeMap = null) {
   switch (s.tool) {
     case 'pen':
       if (s.style === 'fountain') drawFountain(ctx, s);
-      else strokeLine(ctx, buildPolyline(s), s.color, s.size, 1, 'source-over');
+      else strokeLine(ctx, buildPolyline(s, paintScale), s.color, s.size, 1, 'source-over');
       break;
     case 'highlighter':
-      strokeLine(ctx, buildPolyline(s), s.color, s.size, 0.4, 'multiply');
+      strokeLine(ctx, buildPolyline(s, paintScale), s.color, s.size, 0.4, 'multiply');
       break;
     case 'shape':
       drawShape(ctx, s, nodeMap);
@@ -141,7 +147,7 @@ function drawText(ctx, s) {
 // Variable-width fountain: each segment is a round-capped capsule; overlapping
 // round caps blend at joints -> smooth curves, no barbs at sharp turns.
 function drawFountain(ctx, s) {
-  const fs = fountainStroke(s);
+  const fs = fountainStroke(s, paintScale);
   if (!fs) return;
   const { center, widths } = fs;
   ctx.fillStyle = s.color;

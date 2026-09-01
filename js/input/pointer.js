@@ -39,7 +39,7 @@ function afterCameraChange() {
   cameraChanged();
 }
 
-const ink = { active: false, stroke: null, filtered: null, pull: null, straight: false };
+const ink = { active: false, stroke: null, filtered: null, pull: null, straight: false, pf: 0, lastRaw: null, sv: 0 };
 const sel = { mode: null, start: null, undoSnap: null };
 const resize = { active: false, handle: null, stroke: null, startStroke: null, startBBox: null, undoSnap: null };
 const lasso = { pts: null };
@@ -193,7 +193,9 @@ function onDown(e) {
 
 function startInk(e, s) {
   const w = clampToPage(toWorld(s));
-  w.t = e.timeStamp; w.p = e.pressure || 0;
+  // only a real pen reports usable pressure — mice send a constant 0.5 while a
+  // button is down (Pointer Events spec), which would defeat the nib-angle model
+  w.t = e.timeStamp; w.p = e.pointerType === 'pen' ? (e.pressure || 0) : 0;
   const t = curTool();
 
   if (state.tool === 'laser') {
@@ -298,6 +300,9 @@ function startInk(e, s) {
     points: [w],
   };
   ink.filtered = { x: w.x, y: w.y };
+  ink.pf = w.p;
+  ink.lastRaw = { x: w.x, y: w.y, t: e.timeStamp };
+  ink.sv = 0;
   ink.active = true;
   drawLive(ink.stroke);
 }
@@ -390,7 +395,7 @@ function onMove(e) {
   // shift = straight line from the start point to the cursor (Photoshop-style)
   if (e.shiftKey) {
     const start = ink.stroke.points[0];
-    ink.stroke.points = [start, { x: w.x, y: w.y, t: e.timeStamp, p: e.pressure || 0 }];
+    ink.stroke.points = [start, { x: w.x, y: w.y, t: e.timeStamp, p: e.pointerType === 'pen' ? (e.pressure || 0) : 0 }];
     ink.straight = true;
     ink.stroke.straight = true;          // render as a clean uniform-width line
     ink.filtered = { x: w.x, y: w.y };   // keep EMA synced if shift is released mid-stroke
@@ -400,19 +405,37 @@ function onMove(e) {
   ink.straight = false;
   ink.stroke.straight = false;
 
-  // freehand: stabilize via EMA, decimate tiny moves
-  const a = curTool().stabilize || 0;
+  // freehand: soft-leash stabilizer. A time-corrected exponential pull toward
+  // the cursor (event-rate independent, no dead zone — the nib always moves)
+  // plus a hard cap on how far the nib may trail. The cap SHRINKS as the pen
+  // speeds up: slow careful writing gets strong jitter filtering, fast writing
+  // tracks the hand almost directly so it never feels draggy or clipped.
+  const stab = curTool().stabilize || 0;
+  const Rmax = stab * 18 / camera.scale;   // max trail distance (world px)
+  const halfLife = 8 + stab * 28;          // EMA half-life in ms
+  const isPen = e.pointerType === 'pen';
   const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
   for (const ev of events) {
     const ls = localXY(ev);
     const raw = clampToPage(toWorld(ls));
+    const lr = ink.lastRaw || { x: raw.x, y: raw.y, t: ev.timeStamp - 8 };
+    const dt = clamp(ev.timeStamp - lr.t, 1, 50);
+    const v = Math.hypot(raw.x - lr.x, raw.y - lr.y) * camera.scale / dt; // screen px/ms
+    ink.lastRaw = { x: raw.x, y: raw.y, t: ev.timeStamp };
+    ink.sv = ink.sv * 0.75 + v * 0.25;     // smoothed speed estimate
     const f = ink.filtered;
-    f.x = f.x * a + raw.x * (1 - a);
-    f.y = f.y * a + raw.y * (1 - a);
+    const a = 1 - Math.pow(0.5, dt / halfLife);
+    f.x += (raw.x - f.x) * a;
+    f.y += (raw.y - f.y) * a;
+    const R = Rmax * clamp(1 - ink.sv / 2.5, 0.1, 1);
+    const dx = raw.x - f.x, dy = raw.y - f.y;
+    const d = Math.hypot(dx, dy);
+    if (d > R) { const m = (d - R) / d; f.x += dx * m; f.y += dy * m; }
+    ink.pf = ink.pf * 0.65 + (isPen ? (ev.pressure || 0) : 0) * 0.35; // pressure EMA -> steady width
     const last = ink.stroke.points[ink.stroke.points.length - 1];
-    const dx = f.x - last.x, dy = f.y - last.y;
-    if (dx * dx + dy * dy < 0.25 / (camera.scale * camera.scale)) continue;
-    ink.stroke.points.push({ x: f.x, y: f.y, t: ev.timeStamp, p: ev.pressure || 0 });
+    const sx = f.x - last.x, sy = f.y - last.y;
+    if (sx * sx + sy * sy < 0.25 / (camera.scale * camera.scale)) continue;
+    ink.stroke.points.push({ x: f.x, y: f.y, t: ev.timeStamp, p: ink.pf });
   }
   drawLive(ink.stroke);
 }
@@ -487,10 +510,17 @@ function releaseInk(e) {
   }
 
   // pen / highlighter
+  const pUp = e.pointerType === 'pen' ? (e.pressure || 0) : 0;
   if (ink.straight) {
-    ink.stroke.points = [ink.stroke.points[0], { x: w.x, y: w.y, t: e.timeStamp, p: e.pressure || 0 }];
+    ink.stroke.points = [ink.stroke.points[0], { x: w.x, y: w.y, t: e.timeStamp, p: pUp }];
   } else {
-    ink.stroke.points.push({ x: w.x, y: w.y, t: e.timeStamp, p: e.pressure || 0 });
+    // catch-up: bridge the stabilized tail to the true lift point through a
+    // midpoint so the stroke ends where the pen did without a raw jump-hook
+    const last = ink.stroke.points[ink.stroke.points.length - 1];
+    if (Math.hypot(w.x - last.x, w.y - last.y) > 1) {
+      ink.stroke.points.push({ x: (last.x + w.x) / 2, y: (last.y + w.y) / 2, t: e.timeStamp, p: ink.pf });
+    }
+    ink.stroke.points.push({ x: w.x, y: w.y, t: e.timeStamp, p: pUp });
   }
   // scratch-to-erase: a pen scribble over existing ink deletes it instead of
   // committing; over empty paper it just inks (no accidental no-ops)

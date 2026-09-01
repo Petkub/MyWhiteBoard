@@ -597,6 +597,14 @@
 }
 .tb-size.disabled { opacity: 0.35; pointer-events: none; }
 
+/* ---- smoothing (stabilizer) slider in the pen/highlighter sub-bar ---- */
+.tb-smooth { gap: 6px; }
+.tb-smooth-range {
+  width: 92px; height: 18px; margin: 0; cursor: pointer;
+  accent-color: var(--ink);
+}
+.tb-smooth-val { min-width: 30px; text-align: right; color: var(--ink); font-size: 12px; }
+
 /* ---- shape options (fill + grid cols/rows) ---- */
 .tb-shapeopts { display: flex; align-items: center; gap: 6px; }
 .tb-step { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--ink-soft); }
