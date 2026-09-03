@@ -414,7 +414,35 @@ function onMove(e) {
     if (dx * dx + dy * dy < 0.25 / (camera.scale * camera.scale)) continue;
     ink.stroke.points.push({ x: f.x, y: f.y, t: ev.timeStamp, p: ev.pressure || 0 });
   }
-  drawLive(ink.stroke);
+  drawLive(predictedLiveStroke(ink.stroke));
+}
+
+// Stabilizing (the EMA above) inherently trails the real cursor by
+// construction — any positive blend factor lags behind. Left uncompensated,
+// the visible ink tip visibly drags behind the pointer, most obvious at high
+// zoom where a small on-screen gap looks huge next to the (also magnified)
+// letters. Fix used by GoodNotes/PencilKit/etc: extrapolate one short step
+// ahead from recent velocity for the OVERLAY draw only — the extra point is
+// never written into ink.stroke.points, so it leaves no trace in the
+// committed stroke; it's discarded and recomputed fresh every single frame,
+// so a bad extrapolation on a sudden direction change is visible for at most
+// one frame before the next real sample corrects it.
+function predictedLiveStroke(stroke) {
+  const pts = stroke.points;
+  const n = pts.length;
+  if (n < 2) return stroke;
+  const last = pts[n - 1], prev = pts[n - 2];
+  const dt = Math.max(1, (last.t || 0) - (prev.t || 0));
+  const lookahead = 8 + (curTool().stabilize || 0) * 24; // ms; more smoothing -> predict further
+  const vx = (last.x - prev.x) / dt, vy = (last.y - prev.y) / dt;
+  let px = last.x + vx * lookahead, py = last.y + vy * lookahead;
+  // cap the extrapolation distance (screen-px terms) so noisy/short dt can't
+  // fling the predicted tip far off
+  const maxStep = 24 / camera.scale;
+  const dx = px - last.x, dy = py - last.y, d = Math.hypot(dx, dy);
+  if (d > maxStep) { const m = maxStep / d; px = last.x + dx * m; py = last.y + dy * m; }
+  const tip = clampToPage({ x: px, y: py });
+  return { ...stroke, points: [...pts, { x: tip.x, y: tip.y, t: last.t + lookahead, p: last.p }] };
 }
 
 // ------------------------------------------------------------------- pointer up
