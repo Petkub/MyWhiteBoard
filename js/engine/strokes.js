@@ -5,10 +5,35 @@
 import { clamp } from '../config.js';
 import { textHeight } from './text.js';
 
-// Catmull-Rom resample at fixed arc-length step. sharpness 0 = soft, 1 = polyline.
+// Centripetal Catmull-Rom (Barry-Goldman formulation), blended toward a
+// straight chord by `sharpness`. Fast freehand strokes land raw points very
+// unevenly spaced (a quick flick covers far more distance per pointer event
+// than a slow curve) — the old UNIFORM-parameter Catmull-Rom assumes roughly
+// even spacing and bulges/loops when it isn't, which is exactly the "lumpy
+// polygon circle" artifact on fast strokes. Centripetal (alpha=0.5) parametrizes
+// by sqrt(chord length) instead, which never loops or overshoots regardless of
+// how unevenly the raw points land.
+const CR_ALPHA = 0.5;
+function crParam(a, b) {
+  return Math.pow(Math.max(Math.hypot(b.x - a.x, b.y - a.y), 1e-4), CR_ALPHA);
+}
+// Evaluate the centripetal spline through p1..p2 (p0/p3 = outer neighbors) at u in [0,1].
+function centripetal(p0, p1, p2, p3, u) {
+  const t0 = 0, t1 = t0 + crParam(p0, p1), t2 = t1 + crParam(p1, p2), t3 = t2 + crParam(p2, p3);
+  const t = t1 + (t2 - t1) * u;
+  const mix = (ta, tb, pa, pb) => {
+    const d = tb - ta || 1e-6;
+    return { x: (tb - t) / d * pa.x + (t - ta) / d * pb.x, y: (tb - t) / d * pa.y + (t - ta) / d * pb.y };
+  };
+  const A1 = mix(t0, t1, p0, p1), A2 = mix(t1, t2, p1, p2), A3 = mix(t2, t3, p2, p3);
+  const B1 = mix(t0, t2, A1, A2), B2 = mix(t1, t3, A2, A3);
+  return mix(t1, t2, B1, B2);
+}
+
+// Resample at fixed arc-length step. sharpness 0 = soft curve, 1 = polyline.
 export function resampleCenterline(pts, sharpness, step = 2.0) {
   if (pts.length < 2) return pts.slice();
-  const k = (1 - clamp(sharpness, 0, 1)) * (2 / 3);
+  const sharp = clamp(sharpness, 0, 1);
   const out = [{ x: pts[0].x, y: pts[0].y, t: pts[0].t, p: pts[0].p }];
   let leftover = 0;
 
@@ -17,15 +42,14 @@ export function resampleCenterline(pts, sharpness, step = 2.0) {
     const p1 = pts[i];
     const p2 = pts[i + 1];
     const p3 = pts[i + 2] || p2;
-    const c1x = p1.x + (p2.x - p0.x) * k, c1y = p1.y + (p2.y - p0.y) * k;
-    const c2x = p2.x - (p3.x - p1.x) * k, c2y = p2.y - (p3.y - p1.y) * k;
     const chord = Math.hypot(p2.x - p1.x, p2.y - p1.y);
     const samples = Math.max(2, Math.ceil(chord / step) * 2);
     let prev = { x: p1.x, y: p1.y };
     for (let j = 1; j <= samples; j++) {
       const u = j / samples;
-      const x = bez(p1.x, c1x, c2x, p2.x, u);
-      const y = bez(p1.y, c1y, c2y, p2.y, u);
+      const sp = centripetal(p0, p1, p2, p3, u);
+      const x = lerp(p1.x, p2.x, u) * sharp + sp.x * (1 - sharp);
+      const y = lerp(p1.y, p2.y, u) * sharp + sp.y * (1 - sharp);
       leftover += Math.hypot(x - prev.x, y - prev.y);
       if (leftover >= step) {
         out.push({ x, y, t: lerp(p1.t || 0, p2.t || 0, u), p: lerp(p1.p || 0, p2.p || 0, u) });
@@ -39,10 +63,6 @@ export function resampleCenterline(pts, sharpness, step = 2.0) {
   return out;
 }
 
-function bez(p0, p1, p2, p3, u) {
-  const v = 1 - u;
-  return v * v * v * p0 + 3 * v * v * u * p1 + 3 * v * u * u * p2 + u * u * u * p3;
-}
 function lerp(a, b, u) { return a + (b - a) * u; }
 
 function computeVelocities(pts) {
