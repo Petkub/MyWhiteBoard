@@ -37,7 +37,7 @@ export function drawLive(stroke) {
   clearOverlay();
   if (!stroke) return;
   world();
-  setPaintScale(camera.scale * dpr); // live ink samples at on-screen resolution
+  setPaintScale(camera.scale * dpr, true); // live ink: on-screen resolution, cheaper recompute
   drawStroke(ctx, stroke);
 }
 

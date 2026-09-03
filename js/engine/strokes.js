@@ -113,7 +113,14 @@ function smoothPositions(pts, passes) {
 // world-px-fixed sampling looks chunky once the zoom stretches each sample
 // gap across many screen pixels. All windows below are converted to world-
 // distance from that step so the stroke's shape doesn't change with zoom.
-export function fountainStroke(s, pxScale = 1) {
+// live=true (in-progress preview, called on every pointer move — see overlay.js)
+// trades some smoothing quality for speed: the whole stroke-so-far is rebuilt
+// from scratch every call, so cost grows with stroke length; a long stroke on
+// a CPU-contended machine (e.g. screen-share encoding eating the main thread)
+// can fall behind and cause choppier input capture. The one-shot commit /
+// export paths (live=false) keep full quality — nothing is ever permanently
+// downgraded, only the transient while-drawing preview.
+export function fountainStroke(s, pxScale = 1, live = false) {
   const raw = s.points;
   if (!raw.length) return null;
   const base = s.size;
@@ -121,10 +128,10 @@ export function fountainStroke(s, pxScale = 1) {
     return { center: [{ x: raw[0].x, y: raw[0].y }], widths: [Math.max(0.8, base)] };
   }
 
-  const step = clamp(1.6 / pxScale, 0.2, 1.6);
+  const step = clamp((live ? 2.6 : 1.6) / pxScale, 0.2, 2.6);
   const center = resampleCenterline(raw, s.sharpness ?? 0.3, step);
   if (center.length < 2) return { center: [center[0]], widths: [base] };
-  smoothPositions(center, Math.round(4 * clamp(1.6 / step, 1, 3)));
+  smoothPositions(center, live ? 2 : Math.round(4 * clamp(1.6 / step, 1, 3)));
 
   const n = center.length;
   // Broad-nib model: width depends on stroke direction vs a fixed nib edge.

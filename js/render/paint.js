@@ -11,9 +11,13 @@ import { get as getImage } from './imageCache.js';
 
 // device px per world px of the surface being painted (canvas scale * dpr, or
 // export raster scale). Callers set it before a paint pass so stroke geometry
-// is sampled finely enough to stay round at high zoom.
+// is sampled finely enough to stay round at high zoom. `live` marks the
+// in-progress overlay pass (redrawn on every pointer move) so fountainStroke
+// can trade a little smoothing quality for speed instead of fully
+// recomputing the whole stroke-so-far at full quality every single move.
 let paintScale = 1;
-export function setPaintScale(k) { paintScale = Math.max(0.1, k || 1); }
+let paintLive = false;
+export function setPaintScale(k, live = false) { paintScale = Math.max(0.1, k || 1); paintLive = !!live; }
 
 export function drawStroke(ctx, s, nodeMap = null) {
   switch (s.tool) {
@@ -147,7 +151,7 @@ function drawText(ctx, s) {
 // Variable-width fountain: each segment is a round-capped capsule; overlapping
 // round caps blend at joints -> smooth curves, no barbs at sharp turns.
 function drawFountain(ctx, s) {
-  const fs = fountainStroke(s, paintScale);
+  const fs = fountainStroke(s, paintScale, paintLive);
   if (!fs) return;
   const { center, widths } = fs;
   ctx.fillStyle = s.color;
