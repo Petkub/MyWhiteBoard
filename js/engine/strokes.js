@@ -134,14 +134,29 @@ export function fountainStroke(s, pxScale = 1, live = false) {
   smoothPositions(center, live ? 2 : Math.round(4 * clamp(1.6 / step, 1, 3)));
 
   const n = center.length;
-  // Broad-nib model: width depends on stroke direction vs a fixed nib edge.
-  // Strokes perpendicular to the nib are thick; parallel are thin. Deterministic
-  // and smooth (no velocity noise) -> real italic/fountain thick-thin contrast.
+  // GoodNotes-style fountain pen: a gentle broad-nib direction contrast (fixed
+  // nib edge — perpendicular strokes thick, parallel thin) blended with how
+  // FAST the hand is moving (screen px/ms; a real fountain pen also lays down
+  // more ink where the hand slows at turns/flourishes). The blend matters most
+  // for non-pressure input (mouse/trackpad) — pure fixed-angle contrast alone
+  // makes some stroke directions always thin no matter how you draw them,
+  // which reads as an arbitrary calligraphy effect rather than natural
+  // handwriting. Real stylus pressure (pr>0) still overrides both and wins.
   const NIB = -Math.PI / 4;                 // nib edge orientation (~45°, italic)
   const sinN = Math.sin(NIB), cosN = Math.cos(NIB);
-  const thinW = base * 0.20, thickW = base * 1.9;
+  const thinW = base * 0.45, thickW = base * 1.5; // gentler range than a real italic nib
   const taper = clamp(s.taper ?? 0.7, 0, 1);
   const K = Math.max(1, Math.round(4.8 / step)); // tangent window ≈ 4.8 world px
+  // per-sample speed (screen px/ms), smoothed so tiny timing jitter doesn't
+  // wobble the ribbon edge
+  const vel = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = center[Math.max(0, i - 1)], b = center[Math.min(n - 1, i + 1)];
+    const dt = Math.max(1, (b.t || 0) - (a.t || 0));
+    vel[i] = Math.hypot(b.x - a.x, b.y - a.y) / dt * pxScale;
+  }
+  const velSm = smoothArray(vel, Math.max(3, Math.round(9.6 / step)) | 1);
+  const REF_V = 0.5; // screen px/ms ~ unhurried writing speed -> full thin past this
   const widths = new Array(n);
   for (let i = 0; i < n; i++) {
     const a = center[Math.max(0, i - K)], b = center[Math.min(n - 1, i + K)];
@@ -150,7 +165,9 @@ export function fountainStroke(s, pxScale = 1, live = false) {
     const ux = tx / len, uy = ty / len;
     let contrast = Math.abs(ux * sinN - uy * cosN); // |sin(angle - nib)|: 0 thin, 1 thick
     contrast = contrast * contrast * (3 - 2 * contrast); // smoothstep: crisper thick/thin edge
-    let w = thinW + (thickW - thinW) * contrast;
+    let slow = clamp(1 - velSm[i] / REF_V, 0, 1);   // 1 = barely moving (thick), 0 = fast (thin)
+    slow = slow * slow * (3 - 2 * slow);
+    let w = thinW + (thickW - thinW) * (contrast * 0.6 + slow * 0.4);
     const pr = center[i].p || 0;
     if (pr > 0) w = thinW + (thickW - thinW) * pr;     // pressure overrides if a real pen
     const taperRange = Math.min(Math.round(12.8 / step), Math.floor(n * 0.14)); // ≈ 12.8 world px
