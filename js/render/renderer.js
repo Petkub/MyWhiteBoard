@@ -6,7 +6,7 @@ import { camera, screenToWorld } from '../viewport/camera.js';
 import { state, spreadPages, SPREAD_GAP } from '../state.js';
 import { strokeBBox } from '../engine/strokes.js';
 import { nodeMapOf } from '../engine/shapes.js';
-import { drawStroke, setPaintScale } from './paint.js';
+import { drawStroke } from './paint.js';
 import { get as getImage } from './imageCache.js';
 
 let canvas, ctx, dpr = 1, vw = 0, vh = 0;
@@ -35,7 +35,6 @@ export function render() {
   // world -> device px
   ctx.setTransform(camera.scale * dpr, 0, 0, camera.scale * dpr, -camera.x * dpr, -camera.y * dpr);
   ctx.imageSmoothingQuality = 'high';
-  setPaintScale(camera.scale * dpr); // stroke sampling follows on-screen resolution
 
   const topLeft = screenToWorld(0, 0);
   const botRight = screenToWorld(vw, vh);
