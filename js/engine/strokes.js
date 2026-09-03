@@ -29,7 +29,7 @@ export function resampleCenterline(pts, sharpness, step = 2.0) {
       leftover += Math.hypot(x - prev.x, y - prev.y);
       if (leftover >= step) {
         out.push({ x, y, t: lerp(p1.t || 0, p2.t || 0, u), p: lerp(p1.p || 0, p2.p || 0, u) });
-        leftover = 0;
+        leftover -= step; // carry the fractional remainder -> even sample spacing
       }
       prev = { x, y };
     }
@@ -88,7 +88,12 @@ function smoothPositions(pts, passes) {
 
 // Fountain stroke geometry: smoothed centerline + per-sample width.
 // Rendered by paint.js as a round-capped capsule chain (no barbs, smooth joins).
-export function fountainStroke(s) {
+// pxScale = device px per world px at draw time: the sample step targets ~1.6
+// DEVICE px so a stroke stays round (not a faceted polygon) at high zoom —
+// world-px-fixed sampling looks chunky once the zoom stretches each sample
+// gap across many screen pixels. All windows below are converted to world-
+// distance from that step so the stroke's shape doesn't change with zoom.
+export function fountainStroke(s, pxScale = 1) {
   const raw = s.points;
   if (!raw.length) return null;
   const base = s.size;
@@ -96,9 +101,10 @@ export function fountainStroke(s) {
     return { center: [{ x: raw[0].x, y: raw[0].y }], widths: [Math.max(0.8, base)] };
   }
 
-  const center = resampleCenterline(raw, s.sharpness ?? 0.3, 1.6);
+  const step = clamp(1.6 / pxScale, 0.2, 1.6);
+  const center = resampleCenterline(raw, s.sharpness ?? 0.3, step);
   if (center.length < 2) return { center: [center[0]], widths: [base] };
-  smoothPositions(center, 4);
+  smoothPositions(center, Math.round(4 * clamp(1.6 / step, 1, 3)));
 
   const n = center.length;
   // Broad-nib model: width depends on stroke direction vs a fixed nib edge.
@@ -108,7 +114,7 @@ export function fountainStroke(s) {
   const sinN = Math.sin(NIB), cosN = Math.cos(NIB);
   const thinW = base * 0.20, thickW = base * 1.9;
   const taper = clamp(s.taper ?? 0.7, 0, 1);
-  const K = 3;                               // tangent window (smooths direction)
+  const K = Math.max(1, Math.round(4.8 / step)); // tangent window ≈ 4.8 world px
   const widths = new Array(n);
   for (let i = 0; i < n; i++) {
     const a = center[Math.max(0, i - K)], b = center[Math.min(n - 1, i + K)];
@@ -120,7 +126,7 @@ export function fountainStroke(s) {
     let w = thinW + (thickW - thinW) * contrast;
     const pr = center[i].p || 0;
     if (pr > 0) w = thinW + (thickW - thinW) * pr;     // pressure overrides if a real pen
-    const taperRange = Math.min(8, Math.floor(n * 0.14));
+    const taperRange = Math.min(Math.round(12.8 / step), Math.floor(n * 0.14)); // ≈ 12.8 world px
     if (taperRange > 0) {
       const tEnd = Math.min(clamp(i / taperRange, 0, 1), clamp((n - 1 - i) / taperRange, 0, 1));
       w *= 1 - taper * (1 - tEnd);
@@ -129,13 +135,13 @@ export function fountainStroke(s) {
   }
   // gentle width smoothing to erase residual facets (narrow window keeps the
   // thick/thin contrast crisp instead of blurring it)
-  const smoothed = smoothArray(widths, 3);
+  const smoothed = smoothArray(widths, Math.max(3, Math.round(4.8 / step)) | 1);
   return { center, widths: smoothed };
 }
 
 // Plain polyline 'd' through resampled centerline (ballpoint / highlighter).
-export function buildPolyline(s) {
-  const pts = resampleCenterline(s.points, s.sharpness ?? 0.3, 2.0);
+export function buildPolyline(s, pxScale = 1) {
+  const pts = resampleCenterline(s.points, s.sharpness ?? 0.3, clamp(2.0 / pxScale, 0.25, 2.0));
   if (!pts.length) return '';
   let d = `M ${pts[0].x} ${pts[0].y}`;
   for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x} ${pts[i].y}`;
